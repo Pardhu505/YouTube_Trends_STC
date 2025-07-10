@@ -20,6 +20,30 @@ p:contains("Made with Emergent") {
     overflow: hidden !important;
 }
 
+/* Specific targeting of the Emergent badge */
+#emergent-badge,
+a[id="emergent-badge"],
+*[id="emergent-badge"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    z-index: -1 !important;
+}
+
+/* Target by href attribute */
+a[href*="emergent.sh"],
+a[href*="utm_source=emergent-badge"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
 /* Additional CSS to hide any bottom-right positioned elements that might contain branding */
 div[style*="position: fixed"][style*="bottom"][style*="right"],
 div[style*="position: absolute"][style*="bottom"][style*="right"] {
@@ -56,6 +80,11 @@ div:last-child > div[style*="position: absolute"] {
 
 /* Hide any elements containing "Made with" */
 *:contains("Made with") {
+    display: none !important;
+}
+
+/* Target elements with high z-index in bottom right */
+*[style*="z-index: 9999"] {
     display: none !important;
 }
 
