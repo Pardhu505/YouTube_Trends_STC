@@ -14,79 +14,36 @@ function App() {
   const [currentSearchParams, setCurrentSearchParams] = useState(null);
   const { toast } = useToast();
 
-  // Aggressive Emergent branding removal
+  // Simple and safe branding removal that won't interfere with React
   useEffect(() => {
     const removeEmergentBranding = () => {
-      // Target the specific emergent badge by ID
-      const emergentBadge = document.getElementById('emergent-badge');
-      if (emergentBadge) {
-        emergentBadge.remove();
+      try {
+        // Only target the specific emergent badge by ID
+        const badge = document.getElementById('emergent-badge');
+        if (badge) {
+          badge.style.display = 'none';
+        }
+
+        // Hide any links to emergent.sh
+        const emergentLinks = document.querySelectorAll('a[href*="emergent.sh"]');
+        emergentLinks.forEach(link => {
+          link.style.display = 'none';
+        });
+      } catch (error) {
+        // Silently handle any errors to prevent breaking the app
+        console.log('Branding removal error:', error);
       }
-
-      // Target by href attribute
-      const emergentLinks = document.querySelectorAll('a[href*="emergent.sh"], a[href*="utm_source=emergent-badge"]');
-      emergentLinks.forEach(link => link.remove());
-
-      // Target elements with specific styling patterns matching the badge
-      const allElements = document.querySelectorAll('*');
-      allElements.forEach(element => {
-        const style = window.getComputedStyle(element);
-        const text = element.textContent || '';
-        
-        // Check for the specific emergent badge pattern
-        if (text.includes('Made with Emergent') && 
-            style.position === 'fixed' && 
-            style.zIndex === '9999') {
-          element.remove();
-        }
-
-        // Remove elements with emergent-specific attributes
-        if (element.id && element.id.includes('emergent')) {
-          element.remove();
-        }
-
-        // Remove any fixed positioned elements in bottom-right with emergent content
-        if (style.position === 'fixed' && 
-            style.bottom && 
-            style.right && 
-            text.includes('Emergent')) {
-          element.remove();
-        }
-      });
-
-      // Hide any remaining emergent elements
-      document.querySelectorAll('*').forEach(element => {
-        if (element.textContent && element.textContent.includes('Made with Emergent')) {
-          element.style.display = 'none';
-          element.style.visibility = 'hidden';
-          element.style.opacity = '0';
-          element.style.pointerEvents = 'none';
-        }
-      });
     };
 
-    // Run immediately
-    removeEmergentBranding();
-
-    // Run every 500ms to catch dynamically added elements
-    const interval = setInterval(removeEmergentBranding, 500);
-
-    // Run when DOM changes
-    const observer = new MutationObserver(removeEmergentBranding);
-    observer.observe(document.body, { 
-      childList: true, 
-      subtree: true,
-      attributes: true,
-      attributeOldValue: true
-    });
-
-    // Run on window load to catch late-loading elements
-    window.addEventListener('load', removeEmergentBranding);
+    // Run after React has rendered
+    const timer = setTimeout(removeEmergentBranding, 2000);
+    
+    // Check periodically but less aggressively
+    const interval = setInterval(removeEmergentBranding, 10000);
 
     return () => {
+      clearTimeout(timer);
       clearInterval(interval);
-      observer.disconnect();
-      window.removeEventListener('load', removeEmergentBranding);
     };
   }, []);
 
