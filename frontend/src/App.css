@@ -20,6 +20,20 @@ p:contains("Made with Emergent") {
     overflow: hidden !important;
 }
 
+/* Additional CSS to hide any bottom-right positioned elements that might contain branding */
+div[style*="position: fixed"][style*="bottom"][style*="right"],
+div[style*="position: absolute"][style*="bottom"][style*="right"] {
+    display: none !important;
+}
+
+/* Hide any elements with Emergent-related text content */
+*[data-testid*="emergent"],
+*[id*="emergent"],
+*[class*="watermark"],
+*[class*="branding"] {
+    display: none !important;
+}
+
 .App-logo {
     height: 40vmin;
     pointer-events: none;
