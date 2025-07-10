@@ -3,7 +3,7 @@ import './App.css';
 import Header from './components/Header';
 import SearchForm from './components/SearchForm';
 import ResultsTable from './components/ResultsTable';
-import { mockSearch } from './data/mockData';
+import { youtubeAPI } from './services/api';
 import { useToast } from './hooks/use-toast';
 import { Toaster } from './components/ui/sonner';
 
@@ -11,23 +11,35 @@ function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [currentSearchParams, setCurrentSearchParams] = useState(null);
   const { toast } = useToast();
 
   const handleSearch = async (searchParams) => {
     setLoading(true);
+    setCurrentSearchParams(searchParams);
+    
     try {
-      const results = await mockSearch(searchParams);
-      setSearchResults(results);
+      const response = await youtubeAPI.searchVideos(searchParams);
+      setSearchResults(response.videos || []);
       setHasSearched(true);
+      
       toast({
         title: "Search completed successfully!",
-        description: `Found ${results.length} trending videos matching your criteria.`,
+        description: `Found ${response.total_count || 0} trending videos matching your criteria.`,
       });
     } catch (error) {
       console.error('Search error:', error);
+      
+      let errorMessage = "There was an error searching for trending videos. Please try again.";
+      if (error.response?.status === 403) {
+        errorMessage = "YouTube API quota exceeded. Please try again later.";
+      } else if (error.response?.status === 400) {
+        errorMessage = "Invalid search parameters. Please check your input.";
+      }
+      
       toast({
         title: "Search failed",
-        description: "There was an error searching for trending videos. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -35,20 +47,40 @@ function App() {
     }
   };
 
-  const handleExport = (format) => {
-    // Mock export functionality
-    toast({
-      title: `Export ${format.toUpperCase()} started`,
-      description: `Your report is being generated in ${format.toUpperCase()} format.`,
-    });
-    
-    // Simulate export process
-    setTimeout(() => {
+  const handleExport = async (format) => {
+    if (!currentSearchParams) {
+      toast({
+        title: "No search data available",
+        description: "Please perform a search first before exporting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: `Export ${format.toUpperCase()} started`,
+        description: `Your report is being generated in ${format.toUpperCase()} format.`,
+      });
+
+      if (format === 'csv') {
+        await youtubeAPI.exportCSV(currentSearchParams);
+      } else if (format === 'pdf') {
+        await youtubeAPI.exportPDF(currentSearchParams);
+      }
+
       toast({
         title: "Export completed!",
         description: `Your ${format.toUpperCase()} report has been downloaded.`,
       });
-    }, 2000);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export failed",
+        description: `There was an error generating the ${format.toUpperCase()} report. Please try again.`,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
