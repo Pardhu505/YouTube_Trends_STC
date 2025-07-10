@@ -1,58 +1,106 @@
 {
   "summary": {
-    "passed": 0,
+    "passed": 9,
     "total": 9,
-    "success_rate": "0.0%",
-    "timestamp": "2025-07-10T11:12:22.197214"
+    "success_rate": "100.0%",
+    "timestamp": "2025-07-10T11:14:03.828781"
   },
   "detailed_results": {
     "API Health Check": {
-      "success": false,
-      "message": "API returned status 502",
+      "success": true,
+      "message": "API is running: YouTube Trends Analytics API is running",
       "details": {},
-      "timestamp": "2025-07-10T11:12:18.603261"
+      "timestamp": "2025-07-10T11:13:56.812550"
     },
     "YouTube Search API": {
-      "success": false,
-      "message": "API returned status 502: ",
-      "details": {},
-      "timestamp": "2025-07-10T11:12:18.615087"
+      "success": true,
+      "message": "Successfully retrieved 50 videos with all required fields",
+      "details": {
+        "sample_video": "SOOSEKI Lyrical Video | Pushpa 2 The Rule | Allu Arjun | Rashmika | Shreya Ghoshal | Sukumar| DSP",
+        "total_videos": 50
+      },
+      "timestamp": "2025-07-10T11:13:58.131340"
     },
     "Trending Videos API": {
-      "success": false,
-      "message": "API returned status 502: ",
-      "details": {},
-      "timestamp": "2025-07-10T11:12:22.092846"
+      "success": true,
+      "message": "Successfully retrieved 50 trending videos",
+      "details": {
+        "region": "IN",
+        "total_videos": 50
+      },
+      "timestamp": "2025-07-10T11:13:58.328941"
     },
     "CSV Export": {
-      "success": false,
-      "message": "API returned status 502: ",
-      "details": {},
-      "timestamp": "2025-07-10T11:12:22.098909"
+      "success": true,
+      "message": "CSV export successful with 165 data rows",
+      "details": {
+        "content_type": "text/csv; charset=utf-8",
+        "header": "Timestamp,Title,Channel,Description,Views,Likes,Comments,Sentiment,URL\r"
+      },
+      "timestamp": "2025-07-10T11:13:59.022466"
     },
     "PDF Export": {
-      "success": false,
-      "message": "API returned status 502: ",
-      "details": {},
-      "timestamp": "2025-07-10T11:12:22.108249"
+      "success": true,
+      "message": "PDF export successful, size: 6055 bytes",
+      "details": {
+        "content_type": "application/pdf"
+      },
+      "timestamp": "2025-07-10T11:13:59.838023"
     },
     "Sentiment Analysis": {
-      "success": false,
-      "message": "No data to analyze sentiment",
-      "details": {},
-      "timestamp": "2025-07-10T11:12:22.183148"
+      "success": true,
+      "message": "Sentiment analysis is working correctly",
+      "details": {
+        "results": [
+          {
+            "keywords": "best telugu movies amazing",
+            "sentiment_distribution": {
+              "Positive": 46,
+              "Neutral": 4
+            },
+            "total_videos": 50
+          },
+          {
+            "keywords": "worst telugu movies disaster",
+            "sentiment_distribution": {
+              "Negative": 10,
+              "Positive": 3,
+              "Neutral": 2
+            },
+            "total_videos": 15
+          },
+          {
+            "keywords": "telugu movies news",
+            "sentiment_distribution": {
+              "Neutral": 19,
+              "Positive": 28,
+              "Negative": 3
+            },
+            "total_videos": 50
+          }
+        ]
+      },
+      "timestamp": "2025-07-10T11:14:01.276724"
     },
     "MongoDB Storage": {
-      "success": false,
-      "message": "Failed to perform search for storage test",
-      "details": {},
-      "timestamp": "2025-07-10T11:12:22.189188"
+      "success": true,
+      "message": "Data storage verified - 6 searches stored",
+      "details": {
+        "analytics": {
+          "total_searches": 6,
+          "recent_searches": 6,
+          "last_updated": "2025-07-10T11:14:03.745598"
+        }
+      },
+      "timestamp": "2025-07-10T11:14:03.748858"
     },
     "Error Handling": {
-      "success": false,
-      "message": "Unexpected response to invalid input: 502",
-      "details": {},
-      "timestamp": "2025-07-10T11:12:22.196814"
+      "success": true,
+      "message": "API handles invalid parameters appropriately",
+      "details": {
+        "status_code": 200
+      },
+      "timestamp": "2025-07-10T11:14:03.828307"
     }
   }
 }
