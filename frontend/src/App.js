@@ -14,59 +14,27 @@ function App() {
   const [currentSearchParams, setCurrentSearchParams] = useState(null);
   const { toast } = useToast();
 
-  // Aggressive removal of Emergent branding
+  // Simple branding removal
   useEffect(() => {
     const removeEmergentBranding = () => {
-      // Remove any elements containing "Made with Emergent" or "Emergent"
-      const allElements = document.querySelectorAll('*');
-      allElements.forEach(element => {
-        const text = element.textContent || element.innerText || '';
-        if (text.includes('Made with Emergent') || text.includes('Emergent')) {
-          // Only remove if it's specifically the branding, not our content
-          if (text.trim() === 'Made with Emergent' || 
-              text.trim() === 'Emergent' ||
-              text.includes('Made with Emergent')) {
-            element.remove();
+      // Only target specific bottom-right positioned elements that contain "Made with Emergent"
+      const elements = document.querySelectorAll('*');
+      elements.forEach(element => {
+        const text = element.textContent || '';
+        if (text.includes('Made with Emergent') && element.offsetWidth < 200 && element.offsetHeight < 50) {
+          const style = window.getComputedStyle(element);
+          if (style.position === 'fixed' || style.position === 'absolute') {
+            element.style.display = 'none';
           }
-        }
-      });
-
-      // Remove elements with specific positioning (bottom-right corner)
-      const positionedElements = document.querySelectorAll('div, span, a');
-      positionedElements.forEach(element => {
-        const style = window.getComputedStyle(element);
-        if (style.position === 'fixed' || style.position === 'absolute') {
-          if (style.bottom && style.right) {
-            const text = element.textContent || element.innerText || '';
-            if (text.includes('Made with Emergent') || text.includes('Emergent')) {
-              element.remove();
-            }
-          }
-        }
-      });
-
-      // Hide any remaining branding elements
-      document.querySelectorAll('*').forEach(element => {
-        if (element.textContent && element.textContent.includes('Made with Emergent')) {
-          element.style.display = 'none !important';
-          element.style.visibility = 'hidden !important';
-          element.style.opacity = '0 !important';
         }
       });
     };
 
-    // Run immediately and every 100ms to catch dynamic content
-    removeEmergentBranding();
-    const interval = setInterval(removeEmergentBranding, 100);
+    // Run after a delay to let React render first
+    setTimeout(removeEmergentBranding, 1000);
+    const interval = setInterval(removeEmergentBranding, 5000);
 
-    // Also run when DOM changes
-    const observer = new MutationObserver(removeEmergentBranding);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      clearInterval(interval);
-      observer.disconnect();
-    };
+    return () => clearInterval(interval);
   }, []);
 
   const handleSearch = async (searchParams) => {
