@@ -1,3 +1,15 @@
+/* Remove Emergent branding from bottom right */
+.emergent-branding {
+    display: none !important;
+}
+
+/* Hide any Made with Emergent text */
+div[class*="emergent"], 
+div[class*="made-with"], 
+a[href*="emergent"] {
+    display: none !important;
+}
+
 .App-logo {
     height: 40vmin;
     pointer-events: none;
