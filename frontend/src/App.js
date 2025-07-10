@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import Header from './components/Header';
 import SearchForm from './components/SearchForm';
@@ -13,6 +13,49 @@ function App() {
   const [hasSearched, setHasSearched] = useState(false);
   const [currentSearchParams, setCurrentSearchParams] = useState(null);
   const { toast } = useToast();
+
+  // Remove Emergent branding on component mount and periodically
+  useEffect(() => {
+    const removeEmergentBranding = () => {
+      // Remove any elements containing "Made with Emergent"
+      const emergentElements = document.querySelectorAll('*');
+      emergentElements.forEach(element => {
+        if (element.textContent && element.textContent.includes('Made with Emergent')) {
+          element.style.display = 'none';
+          element.style.visibility = 'hidden';
+          element.style.opacity = '0';
+          element.remove();
+        }
+        if (element.textContent && element.textContent.includes('Emergent')) {
+          // Only hide if it's specifically the branding, not our content
+          if (element.textContent.trim() === 'Made with Emergent' || 
+              element.textContent.includes('Made with Emergent')) {
+            element.style.display = 'none';
+            element.style.visibility = 'hidden';
+            element.style.opacity = '0';
+            element.remove();
+          }
+        }
+      });
+
+      // Remove elements positioned at bottom-right (common for branding)
+      const bottomRightElements = document.querySelectorAll('[style*="position: fixed"][style*="bottom"][style*="right"]');
+      bottomRightElements.forEach(element => {
+        if (element.textContent && element.textContent.includes('Emergent')) {
+          element.remove();
+        }
+      });
+    };
+
+    // Run immediately
+    removeEmergentBranding();
+
+    // Run periodically to catch dynamically added elements
+    const interval = setInterval(removeEmergentBranding, 1000);
+
+    // Cleanup
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSearch = async (searchParams) => {
     setLoading(true);
