@@ -93,15 +93,15 @@ const ResultsTable = ({ data, onExport }) => {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="font-semibold text-gray-700">
-                  <div className="flex items-center space-x-1">
+                <TableHead className="font-semibold text-gray-700 text-center">
+                  <div className="flex items-center justify-center space-x-1">
                     <Calendar className="w-4 h-4" />
                     <span>Timestamp</span>
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700">Video Content</TableHead>
-                <TableHead className="font-semibold text-gray-700">
-                  <div className="flex items-center space-x-1 cursor-pointer" onClick={() => {
+                <TableHead className="font-semibold text-gray-700 text-center">Video Content</TableHead>
+                <TableHead className="font-semibold text-gray-700 text-center">
+                  <div className="flex items-center justify-center space-x-1 cursor-pointer" onClick={() => {
                     setSortField('views');
                     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                   }}>
@@ -109,26 +109,26 @@ const ResultsTable = ({ data, onExport }) => {
                     <span>Views</span>
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700">
-                  <div className="flex items-center space-x-1">
+                <TableHead className="font-semibold text-gray-700 text-center">
+                  <div className="flex items-center justify-center space-x-1">
                     <ThumbsUp className="w-4 h-4" />
                     <span>Likes</span>
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700">
-                  <div className="flex items-center space-x-1">
+                <TableHead className="font-semibold text-gray-700 text-center">
+                  <div className="flex items-center justify-center space-x-1">
                     <MessageCircle className="w-4 h-4" />
                     <span>Comments</span>
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700">Sentiment</TableHead>
-                <TableHead className="font-semibold text-gray-700">Actions</TableHead>
+                <TableHead className="font-semibold text-gray-700 text-center">Sentiment</TableHead>
+                <TableHead className="font-semibold text-gray-700 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedData.map((video, index) => (
                 <TableRow key={index} className="hover:bg-gray-50 transition-colors">
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium text-center">
                     {new Date(video.timestamp).toLocaleDateString('en-IN', {
                       year: 'numeric',
                       month: 'short',
@@ -137,14 +137,14 @@ const ResultsTable = ({ data, onExport }) => {
                       minute: '2-digit'
                     })}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-start space-x-3">
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center space-x-3">
                       <img
                         src={video.thumbnail}
                         alt={video.title}
                         className="w-16 h-12 object-cover rounded-lg shadow-sm"
                       />
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 text-left">
                         <h4 className="font-medium text-gray-900 truncate">
                           {video.title}
                         </h4>
@@ -157,30 +157,34 @@ const ResultsTable = ({ data, onExport }) => {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="font-semibold text-red-600">
+                  <TableCell className="font-semibold text-red-600 text-center">
                     {formatNumber(video.views)}
                   </TableCell>
-                  <TableCell className="font-medium text-green-600">
+                  <TableCell className="font-medium text-green-600 text-center">
                     {formatNumber(video.likes)}
                   </TableCell>
-                  <TableCell className="font-medium text-blue-600">
+                  <TableCell className="font-medium text-blue-600 text-center">
                     {formatNumber(video.comments)}
                   </TableCell>
-                  <TableCell>
-                    <Badge className={`${getSentimentColor(video.sentiment)} font-medium`}>
-                      {video.sentiment}
-                    </Badge>
+                  <TableCell className="text-center">
+                    <div className="flex justify-center">
+                      <Badge className={`${getSentimentColor(video.sentiment)} font-medium`}>
+                        {video.sentiment}
+                      </Badge>
+                    </div>
                   </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600 border-red-300 hover:bg-red-50"
-                      onClick={() => window.open(video.url, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
+                  <TableCell className="text-center">
+                    <div className="flex justify-center">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => window.open(video.url, '_blank')}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-1" />
+                        View
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
