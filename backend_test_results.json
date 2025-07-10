@@ -1,0 +1,58 @@
+{
+  "summary": {
+    "passed": 0,
+    "total": 9,
+    "success_rate": "0.0%",
+    "timestamp": "2025-07-10T11:12:22.197214"
+  },
+  "detailed_results": {
+    "API Health Check": {
+      "success": false,
+      "message": "API returned status 502",
+      "details": {},
+      "timestamp": "2025-07-10T11:12:18.603261"
+    },
+    "YouTube Search API": {
+      "success": false,
+      "message": "API returned status 502: ",
+      "details": {},
+      "timestamp": "2025-07-10T11:12:18.615087"
+    },
+    "Trending Videos API": {
+      "success": false,
+      "message": "API returned status 502: ",
+      "details": {},
+      "timestamp": "2025-07-10T11:12:22.092846"
+    },
+    "CSV Export": {
+      "success": false,
+      "message": "API returned status 502: ",
+      "details": {},
+      "timestamp": "2025-07-10T11:12:22.098909"
+    },
+    "PDF Export": {
+      "success": false,
+      "message": "API returned status 502: ",
+      "details": {},
+      "timestamp": "2025-07-10T11:12:22.108249"
+    },
+    "Sentiment Analysis": {
+      "success": false,
+      "message": "No data to analyze sentiment",
+      "details": {},
+      "timestamp": "2025-07-10T11:12:22.183148"
+    },
+    "MongoDB Storage": {
+      "success": false,
+      "message": "Failed to perform search for storage test",
+      "details": {},
+      "timestamp": "2025-07-10T11:12:22.189188"
+    },
+    "Error Handling": {
+      "success": false,
+      "message": "Unexpected response to invalid input: 502",
+      "details": {},
+      "timestamp": "2025-07-10T11:12:22.196814"
+    }
+  }
+}
