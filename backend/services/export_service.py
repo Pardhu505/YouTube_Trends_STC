@@ -6,7 +6,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.units import inch
 from typing import List
-from ..models.video import VideoResponse
+from models.video import VideoResponse
 from datetime import datetime
 import logging
 
