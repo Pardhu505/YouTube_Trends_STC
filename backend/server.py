@@ -13,9 +13,9 @@ from datetime import datetime
 import io
 
 # Import our services and models
-from models.video import VideoSearchRequest, VideoResponse, SearchResponse
-from services.youtube_service import YouTubeService
-from services.export_service import ExportService
+from .models.video import VideoSearchRequest, VideoResponse, SearchResponse
+from .services.youtube_service import YouTubeService
+from .services.export_service import ExportService
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
