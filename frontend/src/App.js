@@ -14,47 +14,59 @@ function App() {
   const [currentSearchParams, setCurrentSearchParams] = useState(null);
   const { toast } = useToast();
 
-  // Remove Emergent branding on component mount and periodically
+  // Aggressive removal of Emergent branding
   useEffect(() => {
     const removeEmergentBranding = () => {
-      // Remove any elements containing "Made with Emergent"
-      const emergentElements = document.querySelectorAll('*');
-      emergentElements.forEach(element => {
-        if (element.textContent && element.textContent.includes('Made with Emergent')) {
-          element.style.display = 'none';
-          element.style.visibility = 'hidden';
-          element.style.opacity = '0';
-          element.remove();
-        }
-        if (element.textContent && element.textContent.includes('Emergent')) {
-          // Only hide if it's specifically the branding, not our content
-          if (element.textContent.trim() === 'Made with Emergent' || 
-              element.textContent.includes('Made with Emergent')) {
-            element.style.display = 'none';
-            element.style.visibility = 'hidden';
-            element.style.opacity = '0';
+      // Remove any elements containing "Made with Emergent" or "Emergent"
+      const allElements = document.querySelectorAll('*');
+      allElements.forEach(element => {
+        const text = element.textContent || element.innerText || '';
+        if (text.includes('Made with Emergent') || text.includes('Emergent')) {
+          // Only remove if it's specifically the branding, not our content
+          if (text.trim() === 'Made with Emergent' || 
+              text.trim() === 'Emergent' ||
+              text.includes('Made with Emergent')) {
             element.remove();
           }
         }
       });
 
-      // Remove elements positioned at bottom-right (common for branding)
-      const bottomRightElements = document.querySelectorAll('[style*="position: fixed"][style*="bottom"][style*="right"]');
-      bottomRightElements.forEach(element => {
-        if (element.textContent && element.textContent.includes('Emergent')) {
-          element.remove();
+      // Remove elements with specific positioning (bottom-right corner)
+      const positionedElements = document.querySelectorAll('div, span, a');
+      positionedElements.forEach(element => {
+        const style = window.getComputedStyle(element);
+        if (style.position === 'fixed' || style.position === 'absolute') {
+          if (style.bottom && style.right) {
+            const text = element.textContent || element.innerText || '';
+            if (text.includes('Made with Emergent') || text.includes('Emergent')) {
+              element.remove();
+            }
+          }
+        }
+      });
+
+      // Hide any remaining branding elements
+      document.querySelectorAll('*').forEach(element => {
+        if (element.textContent && element.textContent.includes('Made with Emergent')) {
+          element.style.display = 'none !important';
+          element.style.visibility = 'hidden !important';
+          element.style.opacity = '0 !important';
         }
       });
     };
 
-    // Run immediately
+    // Run immediately and every 100ms to catch dynamic content
     removeEmergentBranding();
+    const interval = setInterval(removeEmergentBranding, 100);
 
-    // Run periodically to catch dynamically added elements
-    const interval = setInterval(removeEmergentBranding, 1000);
+    // Also run when DOM changes
+    const observer = new MutationObserver(removeEmergentBranding);
+    observer.observe(document.body, { childList: true, subtree: true });
 
-    // Cleanup
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      observer.disconnect();
+    };
   }, []);
 
   const handleSearch = async (searchParams) => {
@@ -184,6 +196,15 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-100 border-t border-gray-200 py-6 mt-12">
+        <div className="container mx-auto px-6 text-center">
+          <p className="text-gray-600 text-sm">
+            For technical clarification reachout to Data Team: Prdhasaradhi
+          </p>
+        </div>
+      </footer>
 
       <Toaster />
     </div>
