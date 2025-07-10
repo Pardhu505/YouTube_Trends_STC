@@ -1,4 +1,4 @@
-/* Remove Emergent branding from bottom right */
+/* Aggressive removal of Emergent branding */
 .emergent-branding {
     display: none !important;
 }
@@ -31,6 +31,31 @@ div[style*="position: absolute"][style*="bottom"][style*="right"] {
 *[id*="emergent"],
 *[class*="watermark"],
 *[class*="branding"] {
+    display: none !important;
+}
+
+/* Super aggressive branding removal - hide anything in bottom right corner */
+div:last-child {
+    position: relative;
+}
+
+div:last-child > div[style*="position: fixed"],
+div:last-child > div[style*="position: absolute"] {
+    display: none !important;
+}
+
+/* Remove any floating elements in bottom corners */
+*[style*="position: fixed"][style*="bottom: 0"],
+*[style*="position: fixed"][style*="bottom: 10px"],
+*[style*="position: fixed"][style*="bottom: 20px"],
+*[style*="position: absolute"][style*="bottom: 0"],
+*[style*="position: absolute"][style*="bottom: 10px"],
+*[style*="position: absolute"][style*="bottom: 20px"] {
+    display: none !important;
+}
+
+/* Hide any elements containing "Made with" */
+*:contains("Made with") {
     display: none !important;
 }
 
