@@ -2,7 +2,7 @@ import os
 import requests
 from datetime import datetime, timedelta
 from typing import List, Optional
-from ..models.video import VideoResponse, VideoSearchRequest
+from models.video import VideoResponse, VideoSearchRequest
 import logging
 
 logger = logging.getLogger(__name__)
