@@ -1,9 +1,12 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -13,9 +16,9 @@ from datetime import datetime
 import io
 
 # Import our services and models
-from .models.video import VideoSearchRequest, VideoResponse, SearchResponse
-from .services.youtube_service import YouTubeService
-from .services.export_service import ExportService
+from models.video import VideoSearchRequest, VideoResponse, SearchResponse
+from services.youtube_service import YouTubeService
+from services.export_service import ExportService
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
