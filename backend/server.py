@@ -78,13 +78,13 @@ async def root():
 async def create_status_check(input: StatusCheckCreate):
     status_dict = input.dict()
     status_obj = StatusCheck(**status_dict)
-    if db:
+    if db is not None:
         _ = await db.status_checks.insert_one(status_obj.dict())
     return status_obj
 
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
-    if not db:
+    if db is None:
         return []
     try:
         status_checks = await db.status_checks.find().to_list(1000)
