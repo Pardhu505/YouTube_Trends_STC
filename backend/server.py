@@ -1,12 +1,9 @@
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from fastapi import FastAPI, APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -14,6 +11,7 @@ from typing import List
 import uuid
 from datetime import datetime
 import io
+import asyncio
 
 # Import our services and models
 from models.video import VideoSearchRequest, VideoResponse, SearchResponse
@@ -23,10 +21,18 @@ from services.export_service import ExportService
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# MongoDB connection with better error handling
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/youtube_trends')
+db_name = os.environ.get('DB_NAME', 'youtube_trends')
+
+try:
+    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+    db = client[db_name]
+    print(f"Connected to MongoDB: {db_name}")
+except Exception as e:
+    print(f"MongoDB connection error: {e}")
+    client = None
+    db = None
 
 # Create the main app without a prefix
 app = FastAPI(
