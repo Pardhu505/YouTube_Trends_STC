@@ -215,6 +215,9 @@ async def get_analytics_summary():
     Get analytics summary from stored data
     """
     try:
+        if not db:
+            return {"message": "Database not available"}
+            
         # Get recent search results
         recent_searches = await db.search_results.find().sort("timestamp", -1).limit(10).to_list(10)
         
@@ -231,16 +234,17 @@ async def get_analytics_summary():
         
     except Exception as e:
         logging.error(f"Error getting analytics summary: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting analytics summary: {str(e)}")
+        return {"error": str(e)}
 
 # Include the router in the main app
 app.include_router(api_router)
 
+# Enhanced CORS for production
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=["*"],  # In production, specify your Vercel domain
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -251,10 +255,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_event():
+    logger.info("YouTube Trends API starting up...")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    if client:
+        client.close()
 
+# For Render deployment
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    port = int(os.environ.get("PORT", 8001))
+    uvicorn.run(app, host="0.0.0.0", port=port)
