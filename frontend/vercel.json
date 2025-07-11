@@ -1,23 +1,13 @@
-# Deployment configuration for Vercel
 {
   "version": 2,
-  "name": "youtube-trends-frontend",
   "builds": [
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
+      "config": { "distDir": "build" }
     }
   ],
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ],
-  "env": {
-    "REACT_APP_BACKEND_URL": "https://your-render-backend-url.onrender.com"
-  }
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
