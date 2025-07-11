@@ -14,39 +14,6 @@ function App() {
   const [currentSearchParams, setCurrentSearchParams] = useState(null);
   const { toast } = useToast();
 
-  // Simple and safe branding removal that won't interfere with React
-  useEffect(() => {
-    const removeEmergentBranding = () => {
-      try {
-        // Only target the specific emergent badge by ID
-        const badge = document.getElementById('emergent-badge');
-        if (badge) {
-          badge.style.display = 'none';
-        }
-
-        // Hide any links to emergent.sh
-        const emergentLinks = document.querySelectorAll('a[href*="emergent.sh"]');
-        emergentLinks.forEach(link => {
-          link.style.display = 'none';
-        });
-      } catch (error) {
-        // Silently handle any errors to prevent breaking the app
-        console.log('Branding removal error:', error);
-      }
-    };
-
-    // Run after React has rendered
-    const timer = setTimeout(removeEmergentBranding, 2000);
-    
-    // Check periodically but less aggressively
-    const interval = setInterval(removeEmergentBranding, 10000);
-
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-    };
-  }, []);
-
   const handleSearch = async (searchParams) => {
     setLoading(true);
     setCurrentSearchParams(searchParams);
