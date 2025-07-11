@@ -66,7 +66,7 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "database": "connected" if db else "disconnected"
+        "database": "connected" if db is not None else "disconnected"
     }
 
 # Add your routes to the router instead of directly to app
