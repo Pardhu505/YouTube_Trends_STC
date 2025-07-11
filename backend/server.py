@@ -75,13 +75,19 @@ async def root():
 async def create_status_check(input: StatusCheckCreate):
     status_dict = input.dict()
     status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
+    if db:
+        _ = await db.status_checks.insert_one(status_obj.dict())
     return status_obj
 
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+    if not db:
+        return []
+    try:
+        status_checks = await db.status_checks.find().to_list(1000)
+        return [StatusCheck(**status_check) for status_check in status_checks]
+    except:
+        return []
 
 @api_router.post("/youtube/search", response_model=SearchResponse)
 async def search_youtube_videos(search_request: VideoSearchRequest):
