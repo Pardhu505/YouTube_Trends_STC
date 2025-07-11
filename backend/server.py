@@ -102,7 +102,7 @@ async def search_youtube_videos(search_request: VideoSearchRequest):
         videos = youtube_service.search_videos(search_request)
         
         # Store search results in database (optional if DB fails)
-        if db:
+        if db is not None:
             try:
                 search_result = {
                     "search_params": search_request.dict(),
