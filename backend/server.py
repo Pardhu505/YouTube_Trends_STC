@@ -57,6 +57,15 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+# Health check endpoint
+@api_router.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "database": "connected" if db else "disconnected"
+    }
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
