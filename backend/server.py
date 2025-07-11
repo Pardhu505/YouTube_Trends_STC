@@ -95,18 +95,21 @@ async def search_youtube_videos(search_request: VideoSearchRequest):
     Search for YouTube videos based on keywords, date range, and region
     """
     try:
-        # Search for videos using YouTube API
+        # Search for videos using YouTube API with timeout
         videos = youtube_service.search_videos(search_request)
         
-        # Store search results in database
-        search_result = {
-            "search_params": search_request.dict(),
-            "videos": [video.dict() for video in videos],
-            "total_count": len(videos),
-            "timestamp": datetime.utcnow()
-        }
-        
-        await db.search_results.insert_one(search_result)
+        # Store search results in database (optional if DB fails)
+        if db:
+            try:
+                search_result = {
+                    "search_params": search_request.dict(),
+                    "videos": [video.dict() for video in videos],
+                    "total_count": len(videos),
+                    "timestamp": datetime.utcnow()
+                }
+                await db.search_results.insert_one(search_result)
+            except Exception as db_error:
+                print(f"Database storage error: {db_error}")
         
         return SearchResponse(
             videos=videos,
@@ -126,16 +129,19 @@ async def get_trending_videos(region: str = "IN", category_id: str = "0"):
     try:
         videos = youtube_service.get_trending_videos(region, category_id)
         
-        # Store trending results in database
-        trending_result = {
-            "region": region,
-            "category_id": category_id,
-            "videos": [video.dict() for video in videos],
-            "total_count": len(videos),
-            "timestamp": datetime.utcnow()
-        }
-        
-        await db.trending_results.insert_one(trending_result)
+        # Store trending results in database (optional if DB fails)
+        if db:
+            try:
+                trending_result = {
+                    "region": region,
+                    "category_id": category_id,
+                    "videos": [video.dict() for video in videos],
+                    "total_count": len(videos),
+                    "timestamp": datetime.utcnow()
+                }
+                await db.trending_results.insert_one(trending_result)
+            except Exception as db_error:
+                print(f"Database storage error: {db_error}")
         
         return {
             "videos": videos,
