@@ -133,7 +133,7 @@ async def get_trending_videos(region: str = "IN", category_id: str = "0"):
         videos = youtube_service.get_trending_videos(region, category_id)
         
         # Store trending results in database (optional if DB fails)
-        if db:
+        if db is not None:
             try:
                 trending_result = {
                     "region": region,
