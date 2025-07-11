@@ -264,7 +264,7 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    if client:
+    if client is not None:
         client.close()
 
 # For Render deployment
