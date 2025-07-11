@@ -218,7 +218,7 @@ async def get_analytics_summary():
     Get analytics summary from stored data
     """
     try:
-        if not db:
+        if db is None:
             return {"message": "Database not available"}
             
         # Get recent search results
