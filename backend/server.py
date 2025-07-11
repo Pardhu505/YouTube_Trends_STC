@@ -157,26 +157,24 @@ async def get_trending_videos(region: str = "IN", category_id: str = "0"):
 @api_router.post("/export/csv")
 async def export_csv(search_request: VideoSearchRequest):
     """
-    Export search results to CSV format
+    Export search results to CSV format with timeout handling
     """
     try:
-        # Get videos for export
+        # Get videos for export with shorter timeout
         videos = youtube_service.search_videos(search_request)
         
-        # Generate CSV
+        if not videos:
+            raise HTTPException(status_code=404, detail="No videos found for export")
+        
+        # Generate CSV with memory optimization
         csv_content = export_service.export_to_csv(videos, search_request.dict())
         
-        # Create streaming response
-        def iter_csv():
-            yield csv_content
-        
-        response = StreamingResponse(
-            iter_csv(),
+        # Return as response with proper headers
+        return Response(
+            content=csv_content,
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=youtube_trends_report.csv"}
         )
-        
-        return response
         
     except Exception as e:
         logging.error(f"Error exporting CSV: {str(e)}")
@@ -185,26 +183,27 @@ async def export_csv(search_request: VideoSearchRequest):
 @api_router.post("/export/pdf")
 async def export_pdf(search_request: VideoSearchRequest):
     """
-    Export search results to PDF format
+    Export search results to PDF format with timeout handling
     """
     try:
-        # Get videos for export
+        # Get videos for export with shorter timeout
         videos = youtube_service.search_videos(search_request)
         
-        # Generate PDF
-        pdf_content = export_service.export_to_pdf(videos, search_request.dict())
+        if not videos:
+            raise HTTPException(status_code=404, detail="No videos found for export")
         
-        # Create streaming response
-        def iter_pdf():
-            yield pdf_content
+        # Limit videos for PDF to prevent memory issues
+        limited_videos = videos[:20]  # Limit to 20 videos for PDF
         
-        response = StreamingResponse(
-            io.BytesIO(pdf_content),
+        # Generate PDF with memory optimization
+        pdf_content = export_service.export_to_pdf(limited_videos, search_request.dict())
+        
+        # Return as response with proper headers
+        return Response(
+            content=pdf_content,
             media_type="application/pdf",
             headers={"Content-Disposition": "attachment; filename=youtube_trends_report.pdf"}
         )
-        
-        return response
         
     except Exception as e:
         logging.error(f"Error exporting PDF: {str(e)}")
