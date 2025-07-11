@@ -75,9 +75,13 @@ function App() {
       });
     } catch (error) {
       console.error('Export error:', error);
+      let exportErrorMessage = `There was an error generating the ${format.toUpperCase()} report. Please try again.`;
+      if (error.response && error.response.data && error.response.data.detail) {
+        exportErrorMessage = error.response.data.detail; // Use detailed message from backend
+      }
       toast({
         title: "Export failed",
-        description: `There was an error generating the ${format.toUpperCase()} report. Please try again.`,
+        description: exportErrorMessage, // Display more specific error
         variant: "destructive",
       });
     }
