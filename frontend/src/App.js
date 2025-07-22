@@ -150,7 +150,7 @@ function App() {
       <footer className="bg-gray-100 border-t border-gray-200 py-6 mt-12">
         <div className="container mx-auto px-6 text-center">
           <p className="text-gray-600 text-sm">
-            For technical clarification reachout to Data Team: Prdhasaradhi
+            For technical clarification reachout to Data Team: Pardhasaradhi
           </p>
         </div>
       </footer>
