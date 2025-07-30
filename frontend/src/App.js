@@ -3,29 +3,42 @@ import './App.css';
 import Header from './components/Header';
 import SearchForm from './components/SearchForm';
 import ResultsTable from './components/ResultsTable';
+import Summary from './components/Summary';
 import { youtubeAPI } from './services/api';
 import { useToast } from './hooks/use-toast';
 import { Toaster } from './components/ui/sonner';
 
 function App() {
   const [searchResults, setSearchResults] = useState([]);
+  const [summaryData, setSummaryData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [currentSearchParams, setCurrentSearchParams] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const { toast } = useToast();
 
-  const handleSearch = async (searchParams) => {
+  const handleSearch = async (searchParams, page = 1) => {
     setLoading(true);
-    setCurrentSearchParams(searchParams);
+    setCurrentPage(page);
+    const params = { ...searchParams, page, page_size: pageSize };
+    setCurrentSearchParams(params);
     
     try {
-      const response = await youtubeAPI.searchVideos(searchParams);
-      setSearchResults(response.videos || []);
+      const [videoResponse, summaryResponse] = await Promise.all([
+        youtubeAPI.searchVideos(params),
+        youtubeAPI.getAnalyticsSummary(searchParams)
+      ]);
+
+      setSearchResults(videoResponse.videos || []);
+      setTotalResults(videoResponse.total_count || 0);
+      setSummaryData(summaryResponse);
       setHasSearched(true);
       
       toast({
         title: "Search completed successfully!",
-        description: `Found ${response.total_count || 0} trending videos matching your criteria.`,
+        description: `Found ${videoResponse.total_count || 0} trending videos matching your criteria.`,
       });
     } catch (error) {
       console.error('Search error:', error);
@@ -44,6 +57,12 @@ function App() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage > 0 && newPage <= Math.ceil(totalResults / pageSize)) {
+      handleSearch(currentSearchParams, newPage);
     }
   };
 
@@ -108,11 +127,25 @@ function App() {
           <SearchForm onSearch={handleSearch} loading={loading} />
         </div>
 
+        {/* Summary */}
+        {hasSearched && summaryData && (
+          <div className="mb-8">
+            <Summary summary={summaryData} />
+          </div>
+        )}
+
         {/* Results */}
         {hasSearched && (
           <div className="mb-8">
             {searchResults.length > 0 ? (
-              <ResultsTable data={searchResults} onExport={handleExport} />
+              <ResultsTable
+                data={searchResults}
+                onExport={handleExport}
+                onPageChange={handlePageChange}
+                currentPage={currentPage}
+                totalResults={totalResults}
+                pageSize={pageSize}
+              />
             ) : (
               <div className="text-center py-12">
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 max-w-md mx-auto">

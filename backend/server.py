@@ -18,6 +18,7 @@ import asyncio
 
 # Import our services and models
 from models.video import VideoSearchRequest, VideoResponse, SearchResponse
+from models.analytics import AnalyticsSummary, SentimentDistribution
 from services.youtube_service import YouTubeService
 from services.export_service import ExportService
 
@@ -99,7 +100,7 @@ async def search_youtube_videos(search_request: VideoSearchRequest):
     """
     try:
         # Search for videos using YouTube API with timeout
-        videos = youtube_service.search_videos(search_request)
+        videos, total_count = youtube_service.search_videos(search_request)
         
         # Store search results in database (optional if DB fails)
         if db is not None:
@@ -107,7 +108,7 @@ async def search_youtube_videos(search_request: VideoSearchRequest):
                 search_result = {
                     "search_params": search_request.dict(),
                     "videos": [video.dict() for video in videos],
-                    "total_count": len(videos),
+                    "total_count": total_count,
                     "timestamp": datetime.utcnow()
                 }
                 await db.search_results.insert_one(search_result)
@@ -116,7 +117,7 @@ async def search_youtube_videos(search_request: VideoSearchRequest):
         
         return SearchResponse(
             videos=videos,
-            total_count=len(videos),
+            total_count=total_count,
             search_params=search_request
         )
         
@@ -212,32 +213,50 @@ async def export_pdf(search_request: VideoSearchRequest):
         logging.error(f"Error exporting PDF: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error exporting PDF: {str(e)}")
 
-@api_router.get("/analytics/summary")
-async def get_analytics_summary():
+@api_router.post("/youtube/analytics", response_model=AnalyticsSummary)
+async def get_youtube_analytics(search_request: VideoSearchRequest):
     """
-    Get analytics summary from stored data
+    Get analytics summary for a YouTube search
     """
     try:
-        if db is None:
-            return {"message": "Database not available"}
-            
-        # Get recent search results
-        recent_searches = await db.search_results.find().sort("timestamp", -1).limit(10).to_list(10)
+        videos, _ = youtube_service.search_videos(search_request)
+
+        if not videos:
+            raise HTTPException(status_code=404, detail="No videos found for analytics")
+
+        total_videos = len(videos)
         
-        # Calculate summary statistics
-        total_searches = await db.search_results.count_documents({})
+        # Sentiment distribution
+        sentiment_distribution = {"positive": 0, "negative": 0, "neutral": 0}
+        for video in videos:
+            sentiment = video.sentiment.lower()
+            if sentiment in sentiment_distribution:
+                sentiment_distribution[sentiment] += 1
         
-        summary = {
-            "total_searches": total_searches,
-            "recent_searches": len(recent_searches),
-            "last_updated": datetime.utcnow().isoformat()
+        # Overall sentiment
+        overall_sentiment = max(sentiment_distribution, key=sentiment_distribution.get)
+
+        # Average engagement
+        total_views = sum(video.views for video in videos)
+        total_likes = sum(video.likes for video in videos)
+        total_comments = sum(video.comments for video in videos)
+        
+        average_engagement = {
+            "views": total_views / total_videos if total_videos > 0 else 0,
+            "likes": total_likes / total_videos if total_videos > 0 else 0,
+            "comments": total_comments / total_videos if total_videos > 0 else 0,
         }
-        
-        return summary
-        
+
+        return AnalyticsSummary(
+            total_videos=total_videos,
+            sentiment_distribution=SentimentDistribution(**sentiment_distribution),
+            overall_sentiment=overall_sentiment.capitalize(),
+            average_engagement=average_engagement
+        )
+
     except Exception as e:
         logging.error(f"Error getting analytics summary: {str(e)}")
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=f"Error getting analytics summary: {str(e)}")
 
 # Include the router in the main app
 app.include_router(api_router)

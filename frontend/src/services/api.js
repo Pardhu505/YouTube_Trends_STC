@@ -117,9 +117,9 @@ export const youtubeAPI = {
   },
 
   // Get analytics summary
-  getAnalyticsSummary: async () => {
+  getAnalyticsSummary: async (searchParams) => {
     try {
-      const response = await apiClient.get('/analytics/summary');
+      const response = await apiClient.post('/youtube/analytics', searchParams);
       return response.data;
     } catch (error) {
       console.error('Error getting analytics summary:', error);
