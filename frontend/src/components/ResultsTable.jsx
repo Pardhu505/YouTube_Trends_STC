@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
   Table, 
   TableBody, 
@@ -21,9 +22,11 @@ import {
   TrendingUp
 } from 'lucide-react';
 
-const ResultsTable = ({ data, onExport }) => {
+const ResultsTable = ({ data, onExport, onPageChange, currentPage, totalResults, pageSize }) => {
   const [sortField, setSortField] = useState('views');
   const [sortOrder, setSortOrder] = useState('desc');
+
+  const totalPages = Math.ceil(totalResults / pageSize);
 
   const formatNumber = (num) => {
     if (num >= 1000000) {
@@ -192,6 +195,41 @@ const ResultsTable = ({ data, onExport }) => {
           </Table>
         </div>
       </CardContent>
+      <div className="flex items-center justify-between p-4 border-t">
+        <div>
+          <p className="text-sm text-gray-700">
+            Showing{' '}
+            <span className="font-medium">
+              {Math.min(1 + (currentPage - 1) * pageSize, totalResults)}
+            </span>{' '}
+            to{' '}
+            <span className="font-medium">
+              {Math.min(currentPage * pageSize, totalResults)}
+            </span>{' '}
+            of <span className="font-medium">{totalResults}</span> results
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 };
