@@ -43,7 +43,7 @@ class YouTubeService:
             # Convert to VideoResponse objects
             videos = []
             for video in detailed_videos:
-                video_response = self._convert_to_video_response(video)
+                video_response = self._convert_to_video_response(video, search_request.keywords)
                 if video_response:
                     videos.append(video_response)
 
@@ -116,7 +116,7 @@ class YouTubeService:
 
         return response.json().get('items', [])
 
-    def _convert_to_video_response(self, video: dict) -> Optional[VideoResponse]:
+    def _convert_to_video_response(self, video: dict, keywords: str) -> Optional[VideoResponse]:
         """
         Convert YouTube API response to VideoResponse object
         """
@@ -144,7 +144,7 @@ class YouTubeService:
             comments = int(statistics.get('commentCount', 0))
 
             # Analyze sentiment based on title and description
-            sentiment = self._analyze_sentiment(snippet['title'], snippet.get('description', ''))
+            sentiment = self._analyze_sentiment(snippet['title'], snippet.get('description', ''), keywords)
 
             return VideoResponse(
                 id=video['id'],
@@ -172,11 +172,12 @@ class YouTubeService:
         result = self.translate_client.translate(text, target_language=target_language)
         return result['translatedText']
 
-    def _analyze_sentiment(self, title: str, description: str) -> str:
+    def _analyze_sentiment(self, title: str, description: str, keywords: str) -> str:
         """
-        Analyzes the sentiment of the provided text.
+        Analyzes the sentiment of the provided text in the context of the search keywords.
         """
         text = f"{title} {description}"
+        search_keywords = keywords.lower().split()
 
         if self.google_cloud_available:
             try:
@@ -200,12 +201,16 @@ class YouTubeService:
                 document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
 
                 sentiment = self.language_client.analyze_sentiment(document=document).document_sentiment
-                if sentiment.score > 0.25:
-                    return "Positive"
-                elif sentiment.score < -0.25:
-                    return "Negative"
-                else:
-                    return "Neutral"
+
+                # Context-aware sentiment
+                for keyword in search_keywords:
+                    if keyword in text.lower():
+                        if sentiment.score > 0.25:
+                            return "Positive"
+                        elif sentiment.score < -0.25:
+                            return "Negative"
+                return "Neutral"
+
             except Exception as e:
                 logger.error(f"Sentiment analysis failed: {e}")
         
@@ -227,8 +232,13 @@ class YouTubeService:
             'corrupt', 'poor', 'struggle', 'difficult', 'crisis'
         ]
 
-        positive_count = sum(1 for keyword in positive_keywords if keyword in text)
-        negative_count = sum(1 for keyword in negative_keywords if keyword in text)
+        positive_count = 0
+        negative_count = 0
+
+        for keyword in search_keywords:
+            if keyword in text:
+                positive_count += sum(1 for pk in positive_keywords if pk in text)
+                negative_count += sum(1 for nk in negative_keywords if nk in text)
 
         if positive_count > negative_count:
             return "Positive"
