@@ -51,14 +51,14 @@ const Summary = ({ summary, totalResults }) => {
         </div>
         <div className="lg:col-span-2 row-span-2 flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Sentiment Distribution</h3>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
                 data={sentimentData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                outerRadius={80}
+                outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
@@ -75,19 +75,19 @@ const Summary = ({ summary, totalResults }) => {
         <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
           <div>
             <p className="text-sm text-gray-600">Avg. Views</p>
-            <p className="text-2xl font-bold text-gray-900">{Math.round(average_engagement.views)}</p>
+            <p className="text-2xl font-bold text-gray-900">{average_engagement.views.toFixed(2)}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
           <div>
             <p className="text-sm text-gray-600">Avg. Likes</p>
-            <p className="text-2xl font-bold text-gray-900">{Math.round(average_engagement.likes)}</p>
+            <p className="text-2xl font-bold text-gray-900">{average_engagement.likes.toFixed(2)}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
           <div>
             <p className="text-sm text-gray-600">Avg. Comments</p>
-            <p className="text-2xl font-bold text-gray-900">{Math.round(average_engagement.comments)}</p>
+            <p className="text-2xl font-bold text-gray-900">{average_engagement.comments.toFixed(2)}</p>
           </div>
         </div>
       </CardContent>
