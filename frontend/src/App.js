@@ -10,8 +10,10 @@ import { Toaster } from './components/ui/sonner';
 
 function App() {
   const [searchResults, setSearchResults] = useState([]);
+  const [filteredSearchResults, setFilteredSearchResults] = useState([]);
   const [summaryData, setSummaryData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [activeSentiment, setActiveSentiment] = useState('All');
   const [hasSearched, setHasSearched] = useState(false);
   const [currentSearchParams, setCurrentSearchParams] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,6 +34,7 @@ function App() {
       ]);
 
       setSearchResults(videoResponse.videos || []);
+      setFilteredSearchResults(videoResponse.videos || []);
       setTotalResults(videoResponse.total_count || 0);
       setSummaryData(summaryResponse);
       setHasSearched(true);
@@ -63,6 +66,65 @@ function App() {
   const handlePageChange = (newPage) => {
     if (newPage > 0 && newPage <= Math.ceil(totalResults / pageSize)) {
       handleSearch(currentSearchParams, newPage);
+    }
+  };
+
+  const calculateSummary = (videos) => {
+    if (videos.length === 0) {
+      return null;
+    }
+
+    const total_videos = videos.length;
+    const sentiment_distribution = { positive: 0, negative: 0, neutral: 0 };
+    let total_views = 0;
+    let total_likes = 0;
+    let total_comments = 0;
+
+    for (const video of videos) {
+      const sentiment = video.sentiment.toLowerCase();
+      if (sentiment in sentiment_distribution) {
+        sentiment_distribution[sentiment]++;
+      }
+      total_views += video.views;
+      total_likes += video.likes;
+      total_comments += video.comments;
+    }
+
+    const overall_sentiment = Object.keys(sentiment_distribution).reduce((a, b) =>
+      sentiment_distribution[a] > sentiment_distribution[b] ? a : b
+    );
+
+    const average_engagement = {
+      views: total_videos > 0 ? total_views / total_videos : 0,
+      likes: total_videos > 0 ? total_likes / total_videos : 0,
+      comments: total_videos > 0 ? total_comments / total_videos : 0,
+    };
+
+    const total_engagement = total_likes + total_comments;
+
+    return {
+      total_videos,
+      sentiment_distribution,
+      overall_sentiment: overall_sentiment.charAt(0).toUpperCase() + overall_sentiment.slice(1),
+      average_engagement,
+      total_views,
+      total_likes,
+      total_comments,
+      total_engagement,
+    };
+  };
+
+  const handlePieClick = (sentiment) => {
+    setActiveSentiment(sentiment);
+    if (sentiment === 'All') {
+      setFilteredSearchResults(searchResults);
+      setSummaryData(calculateSummary(searchResults));
+    } else {
+      const filtered = searchResults.filter(
+        (video) => video.sentiment.toLowerCase() === sentiment.toLowerCase()
+      );
+      setFilteredSearchResults(filtered);
+      setSummaryData(calculateSummary(filtered));
     }
   };
 
@@ -130,16 +192,20 @@ function App() {
         {/* Summary */}
         {hasSearched && summaryData && (
           <div className="mb-8">
-            <Summary summary={summaryData} totalResults={totalResults} />
+            <Summary
+              summary={summaryData}
+              totalResults={totalResults}
+              onPieClick={handlePieClick}
+            />
           </div>
         )}
 
         {/* Results */}
         {hasSearched && (
           <div className="mb-8">
-            {searchResults.length > 0 ? (
+            {filteredSearchResults.length > 0 ? (
               <ResultsTable
-                data={searchResults}
+                data={filteredSearchResults}
                 onExport={handleExport}
                 onPageChange={handlePageChange}
                 currentPage={currentPage}

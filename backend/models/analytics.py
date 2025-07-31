@@ -11,3 +11,7 @@ class AnalyticsSummary(BaseModel):
     sentiment_distribution: SentimentDistribution
     overall_sentiment: str
     average_engagement: Dict[str, float]
+    total_views: int
+    total_likes: int
+    total_comments: int
+    total_engagement: int
