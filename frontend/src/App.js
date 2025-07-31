@@ -119,12 +119,14 @@ function App() {
     if (sentiment === 'All') {
       setFilteredSearchResults(searchResults);
       setSummaryData(calculateSummary(searchResults));
+      setTotalResults(searchResults.length);
     } else {
       const filtered = searchResults.filter(
         (video) => video.sentiment.toLowerCase() === sentiment.toLowerCase()
       );
       setFilteredSearchResults(filtered);
       setSummaryData(calculateSummary(filtered));
+      setTotalResults(filtered.length);
     }
   };
 
