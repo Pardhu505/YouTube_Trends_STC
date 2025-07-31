@@ -130,7 +130,7 @@ function App() {
         {/* Summary */}
         {hasSearched && summaryData && (
           <div className="mb-8">
-            <Summary summary={summaryData} />
+            <Summary summary={summaryData} totalResults={totalResults} />
           </div>
         )}
 

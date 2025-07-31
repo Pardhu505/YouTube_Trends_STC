@@ -224,7 +224,7 @@ async def get_youtube_analytics(search_request: VideoSearchRequest):
         if not videos:
             raise HTTPException(status_code=404, detail="No videos found for analytics")
 
-        total_videos = len(videos)
+        total_videos_in_search = len(videos)
         
         # Sentiment distribution
         sentiment_distribution = {"positive": 0, "negative": 0, "neutral": 0}
@@ -242,13 +242,13 @@ async def get_youtube_analytics(search_request: VideoSearchRequest):
         total_comments = sum(video.comments for video in videos)
         
         average_engagement = {
-            "views": total_views / total_videos if total_videos > 0 else 0,
-            "likes": total_likes / total_videos if total_videos > 0 else 0,
-            "comments": total_comments / total_videos if total_videos > 0 else 0,
+            "views": total_views / total_videos_in_search if total_videos_in_search > 0 else 0,
+            "likes": total_likes / total_videos_in_search if total_videos_in_search > 0 else 0,
+            "comments": total_comments / total_videos_in_search if total_videos_in_search > 0 else 0,
         }
 
         return AnalyticsSummary(
-            total_videos=total_videos,
+            total_videos=total_videos_in_search,
             sentiment_distribution=SentimentDistribution(**sentiment_distribution),
             overall_sentiment=overall_sentiment.capitalize(),
             average_engagement=average_engagement
