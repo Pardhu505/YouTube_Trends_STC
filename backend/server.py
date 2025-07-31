@@ -247,11 +247,17 @@ async def get_youtube_analytics(search_request: VideoSearchRequest):
             "comments": total_comments / total_videos_in_search if total_videos_in_search > 0 else 0,
         }
 
+        total_engagement = total_likes + total_comments
+
         return AnalyticsSummary(
             total_videos=total_videos_in_search,
             sentiment_distribution=SentimentDistribution(**sentiment_distribution),
             overall_sentiment=overall_sentiment.capitalize(),
-            average_engagement=average_engagement
+            average_engagement=average_engagement,
+            total_views=total_views,
+            total_likes=total_likes,
+            total_comments=total_comments,
+            total_engagement=total_engagement
         )
 
     except Exception as e:

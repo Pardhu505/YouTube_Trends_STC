@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { BarChart, Users, TrendingUp, Smile, Frown, Meh } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const Summary = ({ summary, totalResults }) => {
+const Summary = ({ summary, totalResults, onPieClick }) => {
   if (!summary) {
     return null;
   }
@@ -12,6 +12,9 @@ const Summary = ({ summary, totalResults }) => {
     sentiment_distribution,
     overall_sentiment,
     average_engagement,
+    total_views,
+    total_likes,
+    total_engagement,
   } = summary;
 
   const sentimentData = [
@@ -62,6 +65,7 @@ const Summary = ({ summary, totalResults }) => {
                 fill="#8884d8"
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                onClick={(data) => onPieClick(data.name)}
               >
                 {sentimentData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -88,6 +92,24 @@ const Summary = ({ summary, totalResults }) => {
           <div>
             <p className="text-sm text-gray-600">Avg. Comments</p>
             <p className="text-2xl font-bold text-gray-900">{average_engagement.comments.toFixed(2)}</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+          <div>
+            <p className="text-sm text-gray-600">Total Views</p>
+            <p className="text-2xl font-bold text-gray-900">{total_views}</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+          <div>
+            <p className="text-sm text-gray-600">Total Likes</p>
+            <p className="text-2xl font-bold text-gray-900">{total_likes}</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+          <div>
+            <p className="text-sm text-gray-600">Total Engagement</p>
+            <p className="text-2xl font-bold text-gray-900">{total_engagement}</p>
           </div>
         </div>
       </CardContent>
