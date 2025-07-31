@@ -3,13 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { BarChart, Users, TrendingUp, Smile, Frown, Meh } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const Summary = ({ summary }) => {
+const Summary = ({ summary, totalResults }) => {
   if (!summary) {
     return null;
   }
 
   const {
-    total_videos,
     sentiment_distribution,
     overall_sentiment,
     average_engagement,
@@ -38,7 +37,7 @@ const Summary = ({ summary }) => {
           </div>
           <div>
             <p className="text-sm text-gray-600">Total Videos</p>
-            <p className="text-2xl font-bold text-gray-900">{total_videos}</p>
+            <p className="text-2xl font-bold text-gray-900">{totalResults}</p>
           </div>
         </div>
         <div className="lg:col-span-1 flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">

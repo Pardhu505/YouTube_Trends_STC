@@ -72,17 +72,32 @@ class YouTubeService:
             'publishedAfter': published_after,
             'publishedBefore': published_before,
             'order': 'viewCount',
-            'maxResults': 50,
+            'maxResults': search_request.page_size,
             'relevanceLanguage': 'te' if search_request.region == 'IN' else 'en'
         }
-
-        response = requests.get(url, params=params)
-        response.raise_for_status()
         
-        data = response.json()
-        total_results = data.get('pageInfo', {}).get('totalResults', 0)
+        all_videos = []
+        next_page_token = None
+        total_results = 0
 
-        return data.get('items', []), total_results
+        while True:
+            if next_page_token:
+                params['pageToken'] = next_page_token
+
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            if not total_results:
+                total_results = data.get('pageInfo', {}).get('totalResults', 0)
+
+            all_videos.extend(data.get('items', []))
+            next_page_token = data.get('nextPageToken')
+
+            if not next_page_token or len(all_videos) >= search_request.page_size:
+                break
+
+        return all_videos, total_results
 
     def _get_video_details(self, video_ids: List[str]) -> List[dict]:
         """
