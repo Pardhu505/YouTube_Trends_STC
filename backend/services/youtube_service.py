@@ -4,8 +4,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 from models.video import VideoResponse, VideoSearchRequest
 import logging
-from google.cloud import translate_v2 as translate
-from google.cloud import language_v1
+from google.auth.exceptions import DefaultCredentialsError
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +12,16 @@ class YouTubeService:
     def __init__(self):
         self.api_key = os.environ.get('YOUTUBE_API_KEY', 'AIzaSyARJuopfYemFZcnx9E9vR5rt8QOPl23Dto')
         self.base_url = "https://www.googleapis.com/youtube/v3"
-        self.translate_client = translate.Client()
-        self.language_client = language_v1.LanguageServiceClient()
+        try:
+            from google.cloud import translate_v2 as translate
+            from google.cloud import language_v1
+            self.translate_client = translate.Client()
+            self.language_client = language_v1.LanguageServiceClient()
+            self.google_cloud_available = True
+        except (ImportError, DefaultCredentialsError):
+            self.translate_client = None
+            self.language_client = None
+            self.google_cloud_available = False
 
     def search_videos(self, search_request: VideoSearchRequest) -> Tuple[List[VideoResponse], int]:
         """
@@ -145,6 +152,8 @@ class YouTubeService:
 
     def _translate_text(self, text: str, target_language: str = 'en') -> str:
         """Translates text into the target language."""
+        if not self.google_cloud_available:
+            return text
         result = self.translate_client.translate(text, target_language=target_language)
         return result['translatedText']
 
@@ -153,35 +162,64 @@ class YouTubeService:
         Analyzes the sentiment of the provided text.
         """
         text = f"{title} {description}"
-        
-        # Detect language
-        try:
-            detection = self.translate_client.detect_language(text)
-            language = detection['language']
-        except Exception as e:
-            logger.error(f"Language detection failed: {e}")
-            language = 'en' # Default to English
 
-        # Translate if necessary
-        if language == 'te':
+        if self.google_cloud_available:
             try:
-                text = self._translate_text(text)
+                from google.cloud import language_v1
+                # Detect language
+                try:
+                    detection = self.translate_client.detect_language(text)
+                    language = detection['language']
+                except Exception as e:
+                    logger.error(f"Language detection failed: {e}")
+                    language = 'en' # Default to English
+
+                # Translate if necessary
+                if language == 'te':
+                    try:
+                        text = self._translate_text(text)
+                    except Exception as e:
+                        logger.error(f"Translation failed: {e}")
+
+
+                document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
+
+                sentiment = self.language_client.analyze_sentiment(document=document).document_sentiment
+                if sentiment.score > 0.25:
+                    return "Positive"
+                elif sentiment.score < -0.25:
+                    return "Negative"
+                else:
+                    return "Neutral"
             except Exception as e:
-                logger.error(f"Translation failed: {e}")
-
-
-        document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
+                logger.error(f"Sentiment analysis failed: {e}")
         
-        try:
-            sentiment = self.language_client.analyze_sentiment(document=document).document_sentiment
-            if sentiment.score > 0.25:
-                return "Positive"
-            elif sentiment.score < -0.25:
-                return "Negative"
-            else:
-                return "Neutral"
-        except Exception as e:
-            logger.error(f"Sentiment analysis failed: {e}")
+        # Fallback to keyword-based sentiment analysis
+        text = text.lower()
+        positive_keywords = [
+            'best', 'amazing', 'great', 'excellent', 'wonderful', 'fantastic',
+            'success', 'hit', 'blockbuster', 'record', 'celebration', 'festival',
+            'victory', 'win', 'achievement', 'proud', 'happy', 'joy',
+            'super', 'mass', 'power', 'energy', 'love', 'beautiful',
+            'stunning', 'incredible', 'outstanding', 'brilliant'
+        ]
+
+        negative_keywords = [
+            'worst', 'bad', 'terrible', 'awful', 'disaster', 'flop',
+            'failure', 'disappointed', 'sad', 'angry', 'hate', 'boring',
+            'waste', 'problem', 'issue', 'controversy', 'scandal',
+            'accident', 'death', 'violence', 'crime', 'fraud',
+            'corrupt', 'poor', 'struggle', 'difficult', 'crisis'
+        ]
+
+        positive_count = sum(1 for keyword in positive_keywords if keyword in text)
+        negative_count = sum(1 for keyword in negative_keywords if keyword in text)
+
+        if positive_count > negative_count:
+            return "Positive"
+        elif negative_count > positive_count:
+            return "Negative"
+        else:
             return "Neutral"
 
 
