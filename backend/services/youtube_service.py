@@ -75,12 +75,11 @@ class YouTubeService:
             'maxResults': search_request.page_size,
             'relevanceLanguage': 'te' if search_request.region == 'IN' else 'en'
         }
-        
-        all_videos = []
-        next_page_token = None
-        total_results = 0
 
-        while True:
+        next_page_token = None
+
+        # Loop through pages to get to the desired one
+        for i in range(search_request.page):
             if next_page_token:
                 params['pageToken'] = next_page_token
 
@@ -88,16 +87,21 @@ class YouTubeService:
             response.raise_for_status()
             data = response.json()
 
-            if not total_results:
+            # If this is the last page in the loop, return its data
+            if i == search_request.page - 1:
+                videos = data.get('items', [])
                 total_results = data.get('pageInfo', {}).get('totalResults', 0)
+                return videos, total_results
 
-            all_videos.extend(data.get('items', []))
             next_page_token = data.get('nextPageToken')
 
-            if not next_page_token or len(all_videos) >= search_request.page_size:
-                break
+            # If there's no next page, we can't continue.
+            if not next_page_token:
+                total_results = data.get('pageInfo', {}).get('totalResults', 0)
+                return [], total_results
 
-        return all_videos, total_results
+        # Should not be reached if search_request.page >= 1
+        return [], 0
 
     def _get_video_details(self, video_ids: List[str]) -> List[dict]:
         """
@@ -272,7 +276,7 @@ class YouTubeService:
             # Convert to VideoResponse objects
             video_responses = []
             for video in videos:
-                video_response = self._convert_to_video_response(video)
+                video_response = self._convert_to_video_response(video, "")
                 if video_response:
                     video_responses.append(video_response)
             
