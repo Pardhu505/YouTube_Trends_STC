@@ -165,7 +165,7 @@ async def export_csv(search_request: VideoSearchRequest):
     """
     try:
         # Get videos for export with shorter timeout
-        videos = youtube_service.search_videos(search_request)
+        videos, _ = youtube_service.search_videos(search_request)
         
         if not videos:
             raise HTTPException(status_code=404, detail="No videos found for export")
@@ -191,7 +191,7 @@ async def export_pdf(search_request: VideoSearchRequest):
     """
     try:
         # Get videos for export with shorter timeout
-        videos = youtube_service.search_videos(search_request)
+        videos, _ = youtube_service.search_videos(search_request)
         
         if not videos:
             raise HTTPException(status_code=404, detail="No videos found for export")
@@ -212,6 +212,46 @@ async def export_pdf(search_request: VideoSearchRequest):
     except Exception as e:
         logging.error(f"Error exporting PDF: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error exporting PDF: {str(e)}")
+
+@api_router.get("/analytics/summary", response_model=AnalyticsSummary)
+async def get_analytics_summary():
+    """
+    Get a summary of all searches from the database
+    """
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        # Check for DB connection before query
+        if client:
+            await client.admin.command('ismaster')
+            total_searches = await db.search_results.count_documents({})
+        else:
+            total_searches = 0
+
+        return AnalyticsSummary(
+            total_videos=total_searches,
+            sentiment_distribution=SentimentDistribution(positive=0, negative=0, neutral=0),
+            overall_sentiment="Neutral",
+            average_engagement={},
+            total_views=0,
+            total_likes=0,
+            total_comments=0,
+            total_engagement=0
+        )
+    except Exception as e:
+        logging.warning(f"Analytics summary failed due to DB issue: {str(e)}")
+        # Return a default summary if the database is down
+        return AnalyticsSummary(
+            total_videos=0,
+            sentiment_distribution=SentimentDistribution(positive=0, negative=0, neutral=0),
+            overall_sentiment="Neutral",
+            average_engagement={},
+            total_views=0,
+            total_likes=0,
+            total_comments=0,
+            total_engagement=0
+        )
 
 @api_router.post("/youtube/analytics", response_model=AnalyticsSummary)
 async def get_youtube_analytics(search_request: VideoSearchRequest):

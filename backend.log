@@ -1,0 +1,59 @@
+/app/backend/server.py:326: DeprecationWarning:
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+  @app.on_event("startup")
+/app/backend/server.py:330: DeprecationWarning:
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+  @app.on_event("shutdown")
+INFO:     Started server process [11064]
+INFO:     Waiting for application startup.
+2026-01-02 08:55:09,954 - __main__ - INFO - YouTube Trends API starting up...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+Connected to MongoDB: youtube_trends
+INFO:     127.0.0.1:38182 - "GET /api/ HTTP/1.1" 200 OK
+/app/backend/server.py:109: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+  "search_params": search_request.dict(),
+/app/backend/server.py:110: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+  "videos": [video.dict() for video in videos],
+/app/backend/server.py:112: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.utcnow()
+Database storage error: localhost:27017: [Errno 111] Connection refused, Timeout: 5.0s, Topology Description: <TopologyDescription id: 695787ea2233990e8a32b7a1, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused')>]>
+INFO:     127.0.0.1:38182 - "POST /api/youtube/search HTTP/1.1" 200 OK
+Database storage error: localhost:27017: [Errno 111] Connection refused, Timeout: 5.0s, Topology Description: <TopologyDescription id: 695787ea2233990e8a32b7a1, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused')>]>
+INFO:     127.0.0.1:38182 - "POST /api/youtube/search HTTP/1.1" 200 OK
+/app/backend/server.py:142: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+  "videos": [video.dict() for video in videos],
+/app/backend/server.py:144: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.utcnow()
+Database storage error: localhost:27017: [Errno 111] Connection refused, Timeout: 5.0s, Topology Description: <TopologyDescription id: 695787ea2233990e8a32b7a1, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused')>]>
+INFO:     127.0.0.1:38182 - "GET /api/youtube/trending?region=IN&category_id=0 HTTP/1.1" 200 OK
+/app/backend/server.py:174: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+  csv_content = export_service.export_to_csv(videos, search_request.dict())
+INFO:     127.0.0.1:38182 - "POST /api/export/csv HTTP/1.1" 200 OK
+/app/backend/server.py:203: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+  pdf_content = export_service.export_to_pdf(limited_videos, search_request.dict())
+INFO:     127.0.0.1:38182 - "POST /api/export/pdf HTTP/1.1" 200 OK
+Database storage error: localhost:27017: [Errno 111] Connection refused, Timeout: 5.0s, Topology Description: <TopologyDescription id: 695787ea2233990e8a32b7a1, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused')>]>
+INFO:     127.0.0.1:38182 - "POST /api/youtube/search HTTP/1.1" 200 OK
+Database storage error: localhost:27017: [Errno 111] Connection refused, Timeout: 5.0s, Topology Description: <TopologyDescription id: 695787ea2233990e8a32b7a1, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused')>]>
+INFO:     127.0.0.1:38182 - "POST /api/youtube/search HTTP/1.1" 200 OK
+Database storage error: localhost:27017: [Errno 111] Connection refused, Timeout: 5.0s, Topology Description: <TopologyDescription id: 695787ea2233990e8a32b7a1, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused')>]>
+INFO:     127.0.0.1:38182 - "POST /api/youtube/search HTTP/1.1" 200 OK
+/app/backend/server.py:69: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.utcnow().isoformat(),
+INFO:     127.0.0.1:38182 - "GET /api/health HTTP/1.1" 200 OK
+Database storage error: localhost:27017: [Errno 111] Connection refused, Timeout: 5.0s, Topology Description: <TopologyDescription id: 695787ea2233990e8a32b7a1, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused')>]>
+INFO:     127.0.0.1:38182 - "POST /api/youtube/search HTTP/1.1" 200 OK
+2026-01-02 08:56:08,510 - root - WARNING - Analytics summary failed due to DB issue: localhost:27017: [Errno 111] Connection refused, Timeout: 5.0s, Topology Description: <TopologyDescription id: 695787ea2233990e8a32b7a1, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused')>]>
+INFO:     127.0.0.1:38182 - "GET /api/analytics/summary HTTP/1.1" 200 OK
+2026-01-02 08:56:08,618 - services.youtube_service - ERROR - Error searching videos: 400 Client Error: Bad Request for url: https://www.googleapis.com/youtube/v3/search?key=AIzaSyARJuopfYemFZcnx9E9vR5rt8QOPl23Dto&part=snippet&q=&type=video&regionCode=INVALID&publishedAfter=invalid-dateT00%3A00%3A00Z&publishedBefore=2024-12-31T23%3A59%3A59Z&order=viewCount&maxResults=10&relevanceLanguage=en
+Database storage error: localhost:27017: [Errno 111] Connection refused, Timeout: 5.0s, Topology Description: <TopologyDescription id: 695787ea2233990e8a32b7a1, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused')>]>
+INFO:     127.0.0.1:38182 - "POST /api/youtube/search HTTP/1.1" 200 OK
