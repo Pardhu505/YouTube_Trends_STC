@@ -24,13 +24,17 @@ function App() {
   const handleSearch = async (searchParams, page = 1) => {
     setLoading(true);
     setCurrentPage(page);
-    const params = { ...searchParams, page, page_size: pageSize };
-    setCurrentSearchParams(params);
     
+    // Ensure searchParams don't contain pagination info for consistent state
+    const { page: ignoredPage, ...searchOnlyParams } = searchParams;
+    setCurrentSearchParams(searchOnlyParams);
+
+    const params = { ...searchOnlyParams, page, page_size: pageSize };
+
     try {
       const [videoResponse, summaryResponse] = await Promise.all([
         youtubeAPI.searchVideos(params),
-        youtubeAPI.getAnalyticsSummary(searchParams)
+        youtubeAPI.getAnalyticsSummary(searchOnlyParams)
       ]);
 
       setSearchResults(videoResponse.videos || []);
