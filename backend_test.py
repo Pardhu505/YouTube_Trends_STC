@@ -20,13 +20,7 @@ import time
 
 # Get backend URL from frontend .env file
 def get_backend_url():
-    try:
-        with open('/app/frontend/.env', 'r') as f:
-            for line in f:
-                if line.startswith('REACT_APP_BACKEND_URL='):
-                    return line.split('=', 1)[1].strip()
-    except Exception as e:
-        print(f"Error reading frontend .env: {e}")
+    # For testing purposes, always point to the local server
     return "http://localhost:8001"
 
 BACKEND_URL = get_backend_url()
@@ -293,7 +287,7 @@ class YouTubeBackendTester:
             return False
     
     def test_mongodb_storage(self):
-        """Test MongoDB data persistence"""
+        """Test MongoDB data persistence and analytics summary"""
         try:
             # Check if the database is connected first
             health_response = self.session.get(f"{API_BASE}/health")
@@ -328,14 +322,23 @@ class YouTubeBackendTester:
             
             if analytics_response.status_code == 200:
                 analytics_data = analytics_response.json()
-                # In a DB-less environment, we expect 0 searches.
-                total_searches = analytics_data.get('total_videos', 0)
                 
-                # The test should verify that the endpoint works, even if no data is stored.
-                self.log_test("MongoDB Storage", True,
-                            f"Analytics endpoint is working correctly.",
-                            {"analytics": analytics_data})
-                return True
+                # Verify that analytics data is being calculated
+                total_videos = analytics_data.get('total_videos', 0)
+                total_views = analytics_data.get('total_views', 0)
+                total_likes = analytics_data.get('total_likes', 0)
+                total_comments = analytics_data.get('total_comments', 0)
+
+                if total_videos > 0 and total_views > 0 and total_likes > 0 and total_comments >= 0:
+                    self.log_test("MongoDB Storage", True,
+                                f"Analytics summary is correct with {total_videos} videos",
+                                {"analytics": analytics_data})
+                    return True
+                else:
+                    self.log_test("MongoDB Storage", False,
+                                "Analytics summary data is invalid or zero",
+                                {"analytics": analytics_data})
+                    return False
             else:
                 self.log_test("MongoDB Storage", False, 
                             f"Analytics endpoint failed: {analytics_response.status_code}")

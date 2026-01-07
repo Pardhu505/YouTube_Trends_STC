@@ -41,6 +41,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 dump.rdb
+*.log
+
+# Verification scripts
+verify_*.js
 
 # System files
 .DS_Store
@@ -78,3 +82,13 @@ agenthub/agents/youtube/db
 
 # Mobile development
 android-sdk/
+# Test reports
+.coverage
+coverage.xml
+backend_test_results.json
+
+# Local verification artifacts
+home/
+verification/
+*.png
+screenshots/

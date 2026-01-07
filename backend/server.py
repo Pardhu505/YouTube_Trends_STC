@@ -16,6 +16,13 @@ from datetime import datetime
 import io
 import asyncio
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Import our services and models
 from models.video import VideoSearchRequest, VideoResponse, SearchResponse
 from models.analytics import AnalyticsSummary, SentimentDistribution
@@ -38,11 +45,31 @@ except Exception as e:
     client = None
     db = None
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    logger.info("YouTube Trends API starting up...")
+    global db
+    if client is not None:
+        try:
+            await client.admin.command('ismaster')
+            logger.info("MongoDB connection successful.")
+        except Exception as e:
+            logger.error(f"MongoDB connection failed: {e}")
+            db = None
+    yield
+    # shutdown
+    if client is not None:
+        client.close()
+
 # Create the main app without a prefix
 app = FastAPI(
     title="YouTube Trends Analytics API",
     description="API for analyzing YouTube trends and generating reports",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Create a router with the /api prefix
@@ -222,22 +249,74 @@ async def get_analytics_summary():
         raise HTTPException(status_code=503, detail="Database not connected")
 
     try:
-        # Check for DB connection before query
-        if client:
-            await client.admin.command('ismaster')
-            total_searches = await db.search_results.count_documents({})
+        pipeline = [
+            {"$unwind": "$videos"},
+            {
+                "$group": {
+                    "_id": None,
+                    "total_videos": {"$sum": 1},
+                    "total_views": {"$sum": "$videos.views"},
+                    "total_likes": {"$sum": "$videos.likes"},
+                    "total_comments": {"$sum": "$videos.comments"},
+                    "positive": {"$sum": {"$cond": [{"$eq": ["$videos.sentiment", "Positive"]}, 1, 0]}},
+                    "negative": {"$sum": {"$cond": [{"$eq": ["$videos.sentiment", "Negative"]}, 1, 0]}},
+                    "neutral": {"$sum": {"$cond": [{"$eq": ["$videos.sentiment", "Neutral"]}, 1, 0]}},
+                }
+            }
+        ]
+
+        summary_cursor = db.search_results.aggregate(pipeline)
+        summary_data = await summary_cursor.to_list(length=1)
+
+        if not summary_data:
+            # Return empty summary if no data
+            return AnalyticsSummary(
+                total_videos=0,
+                sentiment_distribution=SentimentDistribution(positive=0, negative=0, neutral=0),
+                overall_sentiment="Neutral",
+                average_engagement={},
+                total_views=0,
+                total_likes=0,
+                total_comments=0,
+                total_engagement=0
+            )
+
+        summary = summary_data[0]
+
+        total_videos = summary.get('total_videos', 0)
+        total_views = summary.get('total_views', 0)
+        total_likes = summary.get('total_likes', 0)
+        total_comments = summary.get('total_comments', 0)
+
+        sentiment_distribution = SentimentDistribution(
+            positive=summary.get('positive', 0),
+            negative=summary.get('negative', 0),
+            neutral=summary.get('neutral', 0)
+        )
+
+        dist_dict = sentiment_distribution.model_dump()
+        if not any(dist_dict.values()):
+            overall_sentiment = "Neutral"
         else:
-            total_searches = 0
+            overall_sentiment = max(dist_dict, key=dist_dict.get).capitalize()
+
+        average_engagement = {
+            "views": total_views / total_videos if total_videos > 0 else 0,
+            "likes": total_likes / total_videos if total_videos > 0 else 0,
+            "comments": total_comments / total_videos if total_videos > 0 else 0,
+        }
+
+        total_engagement = total_likes + total_comments
 
         return AnalyticsSummary(
-            total_videos=total_searches,
-            sentiment_distribution=SentimentDistribution(positive=0, negative=0, neutral=0),
-            overall_sentiment="Neutral",
-            average_engagement={},
-            total_views=0,
-            total_likes=0,
-            total_comments=0,
-            total_engagement=0
+            total_videos=total_videos,
+            sentiment_distribution=sentiment_distribution,
+            overall_sentiment=overall_sentiment,
+            average_engagement=average_engagement,
+            total_views=total_views,
+            total_likes=total_likes,
+            total_comments=total_comments,
+            total_engagement=total_engagement
         )
     except Exception as e:
         logging.warning(f"Analytics summary failed due to DB issue: {str(e)}")
@@ -316,21 +395,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("YouTube Trends API starting up...")
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    if client is not None:
-        client.close()
 
 # For Render deployment
 if __name__ == "__main__":
