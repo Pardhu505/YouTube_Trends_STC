@@ -252,53 +252,57 @@ async def get_analytics_summary():
             total_comments=0,
             total_engagement=0
         )
+
 @api_router.post("/youtube/analytics", response_model=AnalyticsSummary)
 async def get_youtube_analytics(search_request: VideoSearchRequest):
     """
     Get analytics summary for a YouTube search
     """
-    # 1. Fetch videos using your search_videos service
     try:
         videos, _ = youtube_service.search_videos(search_request)
-    except Exception as e:
-        logger.error(f"YouTube Service Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch videos")
 
-    # 2. THE FIX: Handle empty search results BEFORE calculations
-    # This prevents the 500 crash and returns a clean 404
-    if not videos:
-        raise HTTPException(status_code=404, detail="No videos found for analytics")
+        if not videos:
+            raise HTTPException(status_code=404, detail="No videos found for analytics")
 
-    # 3. Calculate Totals (Engagement rates removed per your request)
-    try:
-        sentiment_dist = {"positive": 0, "negative": 0, "neutral": 0}
+        total_videos_in_search = len(videos)
         
+        # Sentiment distribution
+        sentiment_distribution = {"positive": 0, "negative": 0, "neutral": 0}
         for video in videos:
-            # Match the sentiment string from VideoResponse
-            sent = video.sentiment.lower()
-            if sent in sentiment_dist:
-                sentiment_dist[sent] += 1
+            sentiment = video.sentiment.lower()
+            if sentiment in sentiment_distribution:
+                sentiment_distribution[sentiment] += 1
         
-        # Get the highest occurring sentiment
-        overall_sent = max(sentiment_dist, key=sentiment_dist.get)
+        # Overall sentiment
+        overall_sentiment = max(sentiment_distribution, key=sentiment_distribution.get)
 
-        t_views = sum(v.views for v in videos)
-        t_likes = sum(v.likes for v in videos)
-        t_comments = sum(v.comments for v in videos)
+        # Average engagement
+        total_views = sum(video.views for video in videos)
+        total_likes = sum(video.likes for video in videos)
+        total_comments = sum(video.comments for video in videos)
+        
+        average_engagement = {
+            "views": total_views / total_videos_in_search if total_videos_in_search > 0 else 0,
+            "likes": total_likes / total_videos_in_search if total_videos_in_search > 0 else 0,
+            "comments": total_comments / total_videos_in_search if total_videos_in_search > 0 else 0,
+        }
+
+        total_engagement = total_likes + total_comments
 
         return AnalyticsSummary(
-            total_videos=len(videos),
-            sentiment_distribution=SentimentDistribution(**sentiment_dist),
-            overall_sentiment=overall_sent.capitalize(),
-            total_views=t_views,
-            total_likes=t_likes,
-            total_comments=t_comments,
-            total_engagement=t_likes + t_comments
+            total_videos=total_videos_in_search,
+            sentiment_distribution=SentimentDistribution(**sentiment_distribution),
+            overall_sentiment=overall_sentiment.capitalize(),
+            average_engagement=average_engagement,
+            total_views=total_views,
+            total_likes=total_likes,
+            total_comments=total_comments,
+            total_engagement=total_engagement
         )
 
     except Exception as e:
-        logger.error(f"Analytics Processing Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error calculating analytics")
+        logging.error(f"Error getting analytics summary: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting analytics summary: {str(e)}")
 
 # Include the router in the main app
 app.include_router(api_router)
