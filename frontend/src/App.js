@@ -32,18 +32,10 @@ function App() {
     const params = { ...searchOnlyParams, page, page_size: pageSize };
 
     try {
- const videoResponse = await youtubeAPI.searchVideos(params);
-
-const videos = videoResponse.videos || [];
-
-const summaryResponse = await youtubeAPI.getAnalyticsSummary({
-  keywords: searchOnlyParams.keywords,
-  startDate: searchOnlyParams.startDate,
-  endDate: searchOnlyParams.endDate,
-  videos: videos
-});
-
-
+      const [videoResponse, summaryResponse] = await Promise.all([
+        youtubeAPI.searchVideos(params),
+        youtubeAPI.getAnalyticsSummary(searchOnlyParams)
+      ]);
 
       setSearchResults(videoResponse.videos || []);
       setFilteredSearchResults(videoResponse.videos || []);
