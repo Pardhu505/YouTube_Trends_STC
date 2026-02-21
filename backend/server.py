@@ -258,33 +258,39 @@ async def get_youtube_analytics(search_request: VideoSearchRequest):
     """
     Get analytics summary for a YouTube search
     """
+    # 1. Get the videos first
     try:
         videos, _ = youtube_service.search_videos(search_request)
+    except Exception as e:
+        logging.error(f"Search Service Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch videos from YouTube")
 
-        if not videos:
-            raise HTTPException(status_code=404, detail="No videos found for analytics")
+    # 2. Check if empty OUTSIDE the try/except that raises 500
+    if not videos:
+        # This will now correctly return a 404 to the frontend 
+        # instead of being caught and turned into a 500
+        raise HTTPException(status_code=404, detail="No videos found for analytics")
 
+    # 3. Calculate analytics
+    try:
         total_videos_in_search = len(videos)
         
-        # Sentiment distribution
         sentiment_distribution = {"positive": 0, "negative": 0, "neutral": 0}
         for video in videos:
             sentiment = video.sentiment.lower()
             if sentiment in sentiment_distribution:
                 sentiment_distribution[sentiment] += 1
         
-        # Overall sentiment
         overall_sentiment = max(sentiment_distribution, key=sentiment_distribution.get)
 
-        # Average engagement
         total_views = sum(video.views for video in videos)
         total_likes = sum(video.likes for video in videos)
         total_comments = sum(video.comments for video in videos)
         
         average_engagement = {
-            "views": total_views / total_videos_in_search if total_videos_in_search > 0 else 0,
-            "likes": total_likes / total_videos_in_search if total_videos_in_search > 0 else 0,
-            "comments": total_comments / total_videos_in_search if total_videos_in_search > 0 else 0,
+            "views": total_views / total_videos_in_search,
+            "likes": total_likes / total_videos_in_search,
+            "comments": total_comments / total_videos_in_search,
         }
 
         total_engagement = total_likes + total_comments
@@ -301,9 +307,8 @@ async def get_youtube_analytics(search_request: VideoSearchRequest):
         )
 
     except Exception as e:
-        logging.error(f"Error getting analytics summary: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting analytics summary: {str(e)}")
-
+        logging.error(f"Logic Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error calculating analytics: {str(e)}")
 # Include the router in the main app
 app.include_router(api_router)
 
