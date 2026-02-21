@@ -22,50 +22,61 @@ function App() {
   const { toast } = useToast();
 
   const handleSearch = async (searchParams, page = 1) => {
-    setLoading(true);
-    setCurrentPage(page);
-    
-    // Ensure searchParams don't contain pagination info for consistent state
-    const { page: ignoredPage, ...searchOnlyParams } = searchParams;
-    setCurrentSearchParams(searchOnlyParams);
+  setLoading(true);
+  setCurrentPage(page);
+  
+  const { page: ignoredPage, ...searchOnlyParams } = searchParams;
+  setCurrentSearchParams(searchOnlyParams);
 
-    const params = { ...searchOnlyParams, page, page_size: pageSize };
+  const params = { ...searchOnlyParams, page, page_size: pageSize };
 
-    try {
-      const [videoResponse, summaryResponse] = await Promise.all([
-        youtubeAPI.searchVideos(params),
-        youtubeAPI.getAnalyticsSummary(searchOnlyParams)
-      ]);
+  try {
+    // Step 1: Search first
+    const videoResponse = await youtubeAPI.searchVideos(params);
+    const videos = videoResponse.videos || [];
 
-      setSearchResults(videoResponse.videos || []);
-      setFilteredSearchResults(videoResponse.videos || []);
-      setTotalResults(videoResponse.total_count || 0);
-      setSummaryData(summaryResponse);
-      setHasSearched(true);
-      
-      toast({
-        title: "Search completed successfully!",
-        description: `Found ${videoResponse.total_count || 0} trending videos matching your criteria.`,
-      });
-    } catch (error) {
-      console.error('Search error:', error);
-      
-      let errorMessage = "There was an error searching for trending videos. Please try again.";
-      if (error.response?.status === 403) {
-        errorMessage = "YouTube API quota exceeded. Please try again later.";
-      } else if (error.response?.status === 400) {
-        errorMessage = "Invalid search parameters. Please check your input.";
+    setSearchResults(videos);
+    setFilteredSearchResults(videos);
+    setTotalResults(videoResponse.total_count || 0);
+    setHasSearched(true);
+
+    // Step 2: Analytics only if videos exist
+    if (videos.length > 0) {
+      try {
+        const summaryResponse = await youtubeAPI.getAnalyticsSummary(searchOnlyParams);
+        setSummaryData(summaryResponse);
+      } catch (analyticsError) {
+        console.warn('Analytics unavailable, using local calculation:', analyticsError.message);
+        setSummaryData(calculateSummary(videos)); // ← fallback to local calc
       }
-      
-      toast({
-        title: "Search failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    } else {
+      setSummaryData(null);
     }
-  };
+
+    toast({
+      title: "Search completed successfully!",
+      description: `Found ${videoResponse.total_count || 0} trending videos matching your criteria.`,
+    });
+
+  } catch (error) {
+    console.error('Search error:', error);
+    
+    let errorMessage = "There was an error searching for trending videos. Please try again.";
+    if (error.response?.status === 403) {
+      errorMessage = "YouTube API quota exceeded. Please try again later.";
+    } else if (error.response?.status === 400) {
+      errorMessage = "Invalid search parameters. Please check your input.";
+    }
+    
+    toast({
+      title: "Search failed",
+      description: errorMessage,
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handlePageChange = (newPage) => {
     if (newPage > 0 && newPage <= Math.ceil(totalResults / pageSize)) {
