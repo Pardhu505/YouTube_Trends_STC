@@ -24,20 +24,24 @@ apiClient.interceptors.request.use(
 );
 
 // Add response interceptor for error handling
+
 apiClient.interceptors.response.use(
   (response) => {
     console.log('API Response:', response.status, response.config.url);
     return response;
   },
   (error) => {
-    console.error('API Response Error:', error);
-    if (error.response) {
-      console.error('Error Data:', error.response.data);
-      console.error('Error Status:', error.response.status);
+    // FIX: Only log as a hard error if it is NOT a 404
+    if (error.response?.status !== 404) {
+      console.error('API Response Error:', error);
+      if (error.response) {
+        console.error('Error Data:', error.response.data);
+        console.error('Error Status:', error.response.status);
+      }
     }
     return Promise.reject(error);
   }
-);
+);;
 
 export const youtubeAPI = {
   // Search for YouTube videos
@@ -122,10 +126,22 @@ export const youtubeAPI = {
       const response = await apiClient.post('/youtube/analytics', searchParams);
       return response.data;
     } catch (error) {
+      // FIX: If 404, return empty data instead of throwing an error to the UI
+      if (error.response && error.response.status === 404) {
+        return {
+          total_videos: 0,
+          sentiment_distribution: { positive: 0, negative: 0, neutral: 0 },
+          overall_sentiment: "Neutral",
+          total_views: 0,
+          total_likes: 0,
+          total_comments: 0,
+          total_engagement: 0
+        };
+      }
+      
       console.error('Error getting analytics summary:', error);
       throw error;
     }
   }
-};
 
 export default apiClient;
