@@ -262,7 +262,16 @@ async def get_youtube_analytics(search_request: VideoSearchRequest):
         videos, _ = youtube_service.search_videos(search_request)
 
         if not videos:
-            raise HTTPException(status_code=404, detail="No videos found for analytics")
+            return AnalyticsSummary(
+                total_videos=0,
+                sentiment_distribution=SentimentDistribution(positive=0, negative=0, neutral=0),
+                overall_sentiment="Neutral",
+                average_engagement={"views": 0, "likes": 0, "comments": 0},
+                total_views=0,
+                total_likes=0,
+                total_comments=0,
+                total_engagement=0
+            )
 
         total_videos_in_search = len(videos)
         
@@ -300,6 +309,8 @@ async def get_youtube_analytics(search_request: VideoSearchRequest):
             total_engagement=total_engagement
         )
 
+   except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error getting analytics summary: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting analytics summary: {str(e)}")
