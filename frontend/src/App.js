@@ -32,17 +32,28 @@ function App() {
     const params = { ...searchOnlyParams, page, page_size: pageSize };
 
     try {
-      const [videoResponse, summaryResponse] = await Promise.all([
-        youtubeAPI.searchVideos(params),
-        youtubeAPI.getAnalyticsSummary(searchOnlyParams)
-      ]);
+      // Step 1: Search videos first
+      const videoResponse = await youtubeAPI.searchVideos(params);
+      const videos = videoResponse.videos || [];
 
-      setSearchResults(videoResponse.videos || []);
-      setFilteredSearchResults(videoResponse.videos || []);
+      setSearchResults(videos);
+      setFilteredSearchResults(videos);
       setTotalResults(videoResponse.total_count || 0);
-      setSummaryData(summaryResponse);
       setHasSearched(true);
-      
+
+      // Step 2: Analytics only if videos exist — failure won't crash the page
+      if (videos.length > 0) {
+        try {
+          const summaryResponse = await youtubeAPI.getAnalyticsSummary(searchOnlyParams);
+          setSummaryData(summaryResponse);
+        } catch (analyticsError) {
+          console.warn('Analytics API failed, using local calculation:', analyticsError.message);
+          setSummaryData(calculateSummary(videos));
+        }
+      } else {
+        setSummaryData(null);
+      }
+
       toast({
         title: "Search completed successfully!",
         description: `Found ${videoResponse.total_count || 0} trending videos matching your criteria.`,
