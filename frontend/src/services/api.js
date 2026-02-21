@@ -122,9 +122,8 @@ export const youtubeAPI = {
       const response = await apiClient.post('/youtube/analytics', searchParams);
       return response.data;
     } catch (error) {
-      // Return null instead of throwing — callers handle the null case gracefully
-      console.warn('Analytics unavailable:', error.response?.data?.detail || error.message);
-      return null;
+      console.error('Error getting analytics summary:', error);
+      throw error;
     }
   }
 };
