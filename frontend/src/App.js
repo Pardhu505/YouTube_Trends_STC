@@ -21,6 +21,51 @@ function App() {
   const [pageSize, setPageSize] = useState(10);
   const { toast } = useToast();
 
+  const calculateSummary = (videos) => {
+    if (!videos || videos.length === 0) {
+      return null;
+    }
+
+    const total_videos = videos.length;
+    const sentiment_distribution = { positive: 0, negative: 0, neutral: 0 };
+    let total_views = 0;
+    let total_likes = 0;
+    let total_comments = 0;
+
+    for (const video of videos) {
+      const sentiment = video.sentiment ? video.sentiment.toLowerCase() : 'neutral';
+      if (sentiment in sentiment_distribution) {
+        sentiment_distribution[sentiment]++;
+      }
+      total_views += video.views || 0;
+      total_likes += video.likes || 0;
+      total_comments += video.comments || 0;
+    }
+
+    const overall_sentiment = Object.keys(sentiment_distribution).reduce((a, b) =>
+      sentiment_distribution[a] > sentiment_distribution[b] ? a : b
+    );
+
+    const average_engagement = {
+      views: total_videos > 0 ? total_views / total_videos : 0,
+      likes: total_videos > 0 ? total_likes / total_videos : 0,
+      comments: total_videos > 0 ? total_comments / total_videos : 0,
+    };
+
+    const total_engagement = total_likes + total_comments;
+
+    return {
+      total_videos,
+      sentiment_distribution,
+      overall_sentiment: overall_sentiment.charAt(0).toUpperCase() + overall_sentiment.slice(1),
+      average_engagement,
+      total_views,
+      total_likes,
+      total_comments,
+      total_engagement,
+    };
+  };
+
   const handleSearch = async (searchParams, page = 1) => {
     setLoading(true);
     setCurrentPage(page);
@@ -32,15 +77,17 @@ function App() {
     const params = { ...searchOnlyParams, page, page_size: pageSize };
 
     try {
-      const [videoResponse, summaryResponse] = await Promise.all([
-        youtubeAPI.searchVideos(params),
-        youtubeAPI.getAnalyticsSummary(searchOnlyParams)
-      ]);
+      // Fetch only videos, calculate summary locally to avoid extra API calls and errors
+      const videoResponse = await youtubeAPI.searchVideos(params);
 
-      setSearchResults(videoResponse.videos || []);
-      setFilteredSearchResults(videoResponse.videos || []);
+      const videos = videoResponse.videos || [];
+      setSearchResults(videos);
+      setFilteredSearchResults(videos);
       setTotalResults(videoResponse.total_count || 0);
-      setSummaryData(summaryResponse);
+
+      const summary = calculateSummary(videos);
+      setSummaryData(summary);
+
       setHasSearched(true);
       
       toast({
@@ -71,51 +118,6 @@ function App() {
     if (newPage > 0 && newPage <= Math.ceil(totalResults / pageSize)) {
       handleSearch(currentSearchParams, newPage);
     }
-  };
-
-  const calculateSummary = (videos) => {
-    if (videos.length === 0) {
-      return null;
-    }
-
-    const total_videos = videos.length;
-    const sentiment_distribution = { positive: 0, negative: 0, neutral: 0 };
-    let total_views = 0;
-    let total_likes = 0;
-    let total_comments = 0;
-
-    for (const video of videos) {
-      const sentiment = video.sentiment.toLowerCase();
-      if (sentiment in sentiment_distribution) {
-        sentiment_distribution[sentiment]++;
-      }
-      total_views += video.views;
-      total_likes += video.likes;
-      total_comments += video.comments;
-    }
-
-    const overall_sentiment = Object.keys(sentiment_distribution).reduce((a, b) =>
-      sentiment_distribution[a] > sentiment_distribution[b] ? a : b
-    );
-
-    const average_engagement = {
-      views: total_videos > 0 ? total_views / total_videos : 0,
-      likes: total_videos > 0 ? total_likes / total_videos : 0,
-      comments: total_videos > 0 ? total_comments / total_videos : 0,
-    };
-
-    const total_engagement = total_likes + total_comments;
-
-    return {
-      total_videos,
-      sentiment_distribution,
-      overall_sentiment: overall_sentiment.charAt(0).toUpperCase() + overall_sentiment.slice(1),
-      average_engagement,
-      total_views,
-      total_likes,
-      total_comments,
-      total_engagement,
-    };
   };
 
   const handlePieClick = (sentiment) => {
