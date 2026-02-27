@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class YouTubeService:
     def __init__(self):
-        self.api_key = os.environ.get('YOUTUBE_API_KEY', 'AIzaSyARJuopfYemFZcnx9E9vR5rt8QOPl23Dto')
+        self.api_key = os.environ.get('YOUTUBE_API_KEY', 'AIzaSyByIcDjLKKMIp3-6xplEyHtNN8EchI-kq4')
         self.base_url = "https://www.googleapis.com/youtube/v3"
         try:
             from google.cloud import translate_v2 as translate
@@ -27,31 +27,26 @@ class YouTubeService:
         """
         Search for trending YouTube videos based on keywords and date range
         """
-        try:
-            # Get video search results
-            search_results, total_results = self._search_videos_api(search_request)
+        # Get video search results
+        search_results, total_results = self._search_videos_api(search_request)
 
-            # Get detailed video statistics
-            video_ids = [video['id']['videoId'] for video in search_results if video['id']['kind'] == 'youtube#video']
+        # Get detailed video statistics
+        video_ids = [video['id']['videoId'] for video in search_results if video['id']['kind'] == 'youtube#video']
 
-            if not video_ids:
-                return [], 0
-
-            # Get video details including statistics
-            detailed_videos = self._get_video_details(video_ids)
-
-            # Convert to VideoResponse objects
-            videos = []
-            for video in detailed_videos:
-                video_response = self._convert_to_video_response(video, search_request.keywords)
-                if video_response:
-                    videos.append(video_response)
-
-            return videos, total_results
-
-        except Exception as e:
-            logger.error(f"Error searching videos: {str(e)}")
+        if not video_ids:
             return [], 0
+
+        # Get video details including statistics
+        detailed_videos = self._get_video_details(video_ids)
+
+        # Convert to VideoResponse objects
+        videos = []
+        for video in detailed_videos:
+            video_response = self._convert_to_video_response(video, search_request.keywords)
+            if video_response:
+                videos.append(video_response)
+
+        return videos, total_results
 
     def _search_videos_api(self, search_request: VideoSearchRequest) -> Tuple[List[dict], int]:
         """
