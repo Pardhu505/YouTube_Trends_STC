@@ -15,6 +15,7 @@ import uuid
 from datetime import datetime
 import io
 import asyncio
+import requests
 
 # Import our services and models
 from models.video import VideoSearchRequest, VideoResponse, SearchResponse
@@ -121,6 +122,16 @@ async def search_youtube_videos(search_request: VideoSearchRequest):
             search_params=search_request
         )
         
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"YouTube API Error: {str(e)}")
+        if e.response.status_code == 403:
+             raise HTTPException(status_code=403, detail="YouTube API quota exceeded or key invalid")
+        elif e.response.status_code == 400:
+             raise HTTPException(status_code=400, detail="Invalid request to YouTube API (possibly expired key)")
+        elif e.response.status_code == 429:
+             raise HTTPException(status_code=429, detail="Too many requests to YouTube API")
+        else:
+             raise HTTPException(status_code=e.response.status_code, detail=f"YouTube API Error: {str(e)}")
     except Exception as e:
         logging.error(f"Error searching videos: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error searching videos: {str(e)}")
@@ -179,6 +190,17 @@ async def export_csv(search_request: VideoSearchRequest):
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=youtube_trends_report.csv"}
         )
+
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"YouTube API Error during CSV export: {str(e)}")
+        if e.response.status_code == 403:
+             raise HTTPException(status_code=403, detail="YouTube API quota exceeded or key invalid")
+        elif e.response.status_code == 400:
+             raise HTTPException(status_code=400, detail="Invalid request to YouTube API (possibly expired key)")
+        elif e.response.status_code == 429:
+             raise HTTPException(status_code=429, detail="Too many requests to YouTube API")
+        else:
+             raise HTTPException(status_code=e.response.status_code, detail=f"YouTube API Error: {str(e)}")
         
     except Exception as e:
         logging.error(f"Error exporting CSV: {str(e)}")
@@ -208,6 +230,17 @@ async def export_pdf(search_request: VideoSearchRequest):
             media_type="application/pdf",
             headers={"Content-Disposition": "attachment; filename=youtube_trends_report.pdf"}
         )
+
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"YouTube API Error during PDF export: {str(e)}")
+        if e.response.status_code == 403:
+             raise HTTPException(status_code=403, detail="YouTube API quota exceeded or key invalid")
+        elif e.response.status_code == 400:
+             raise HTTPException(status_code=400, detail="Invalid request to YouTube API (possibly expired key)")
+        elif e.response.status_code == 429:
+             raise HTTPException(status_code=429, detail="Too many requests to YouTube API")
+        else:
+             raise HTTPException(status_code=e.response.status_code, detail=f"YouTube API Error: {str(e)}")
         
     except Exception as e:
         logging.error(f"Error exporting PDF: {str(e)}")
@@ -258,36 +291,48 @@ async def get_youtube_analytics(search_request: VideoSearchRequest):
     """
     Get analytics summary for a YouTube search
     """
+    # Default empty response
+    empty_response = AnalyticsSummary(
+        total_videos=0,
+        sentiment_distribution=SentimentDistribution(positive=0, negative=0, neutral=0),
+        overall_sentiment="Neutral",
+        average_engagement={"views": 0, "likes": 0, "comments": 0},
+        total_views=0,
+        total_likes=0,
+        total_comments=0,
+        total_engagement=0
+    )
+
     try:
         videos, _ = youtube_service.search_videos(search_request)
+    except Exception as e:
+        logging.error(f"search_videos failed inside analytics: {str(e)}")
+        return empty_response   # ← never 500, just return empty
 
-        if not videos:
-            raise HTTPException(status_code=404, detail="No videos found for analytics")
+    if not videos:
+        return empty_response   # ← never 500, just return empty
 
+    try:
         total_videos_in_search = len(videos)
         
-        # Sentiment distribution
         sentiment_distribution = {"positive": 0, "negative": 0, "neutral": 0}
         for video in videos:
-            sentiment = video.sentiment.lower()
+            sentiment = getattr(video, 'sentiment', 'neutral')
+            sentiment = sentiment.lower() if sentiment else 'neutral'
             if sentiment in sentiment_distribution:
                 sentiment_distribution[sentiment] += 1
         
-        # Overall sentiment
         overall_sentiment = max(sentiment_distribution, key=sentiment_distribution.get)
 
-        # Average engagement
-        total_views = sum(video.views for video in videos)
-        total_likes = sum(video.likes for video in videos)
-        total_comments = sum(video.comments for video in videos)
+        total_views    = sum(getattr(video, 'views', 0) or 0 for video in videos)
+        total_likes    = sum(getattr(video, 'likes', 0) or 0 for video in videos)
+        total_comments = sum(getattr(video, 'comments', 0) or 0 for video in videos)
         
         average_engagement = {
-            "views": total_views / total_videos_in_search if total_videos_in_search > 0 else 0,
-            "likes": total_likes / total_videos_in_search if total_videos_in_search > 0 else 0,
-            "comments": total_comments / total_videos_in_search if total_videos_in_search > 0 else 0,
+            "views":    total_views    / total_videos_in_search,
+            "likes":    total_likes    / total_videos_in_search,
+            "comments": total_comments / total_videos_in_search,
         }
-
-        total_engagement = total_likes + total_comments
 
         return AnalyticsSummary(
             total_videos=total_videos_in_search,
@@ -297,12 +342,12 @@ async def get_youtube_analytics(search_request: VideoSearchRequest):
             total_views=total_views,
             total_likes=total_likes,
             total_comments=total_comments,
-            total_engagement=total_engagement
+            total_engagement=total_likes + total_comments
         )
 
     except Exception as e:
-        logging.error(f"Error getting analytics summary: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting analytics summary: {str(e)}")
+        logging.error(f"Error computing analytics: {str(e)}")
+        return empty_response   # ← never 500, just return empty
 
 # Include the router in the main app
 app.include_router(api_router)
