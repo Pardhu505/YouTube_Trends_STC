@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class YouTubeService:
     def __init__(self):
-        # self.api_key = os.environ.get('YOUTUBE_API_KEY', 'AIzaSyBzrS2BjhEd6gFQjvtn27nBGLXylDKgIOc')
+        self.api_key = os.environ.get('YOUTUBE_API_KEY', 'AIzaSyARJuopfYemFZcnx9E9vR5rt8QOPl23Dto')
         self.base_url = "https://www.googleapis.com/youtube/v3"
         try:
             from google.cloud import translate_v2 as translate
