@@ -112,36 +112,62 @@ class YouTubeService:
                 'publishedAfter': published_after,
                 'publishedBefore': published_before,
                 'order': 'viewCount',
-                'maxResults': search_request.page_size,
+                'maxResults': min(search_request.page_size, 50),
                 'relevanceLanguage': 'te' if search_request.region == 'IN' else 'en'
             }
 
+            all_videos = []
             next_page_token = None
 
-            # Loop through pages to get to the desired one
-            for i in range(search_request.page):
-                if next_page_token:
-                    params['pageToken'] = next_page_token
+            # If we need more than 50 results (the API limit per request),
+            # we need to iterate through pages.
+            # But the current architecture uses 'page' for pagination in the UI.
+            # So if UI asks for page 1 with page_size 200, we should return 200 results.
 
-                response = requests.get(url, params=params)
+            target_results_count = search_request.page_size
+            pages_to_fetch = (target_results_count + 49) // 50 # 1 if <= 50, 2 if <= 100, etc.
+
+            # First, skip to the requested "page"
+            # Each "page" in the UI is considered a set of 'page_size' results.
+            # So if page=2 and page_size=200, we skip 200 results first.
+            results_to_skip = (search_request.page - 1) * search_request.page_size
+
+            while results_to_skip > 0:
+                skip_params = params.copy()
+                skip_params['maxResults'] = min(results_to_skip, 50)
+                if next_page_token:
+                    skip_params['pageToken'] = next_page_token
+
+                response = requests.get(url, params=skip_params)
                 response.raise_for_status()
                 data = response.json()
 
-                # If this is the last page in the loop, return its data
-                if i == search_request.page - 1:
-                    videos = data.get('items', [])
-                    total_results = data.get('pageInfo', {}).get('totalResults', 0)
-                    return videos, total_results
+                next_page_token = data.get('nextPageToken')
+                if not next_page_token:
+                    return [], data.get('pageInfo', {}).get('totalResults', 0)
+
+                results_to_skip -= skip_params['maxResults']
+
+            # Now fetch the actual results
+            total_results = 0
+            while len(all_videos) < target_results_count:
+                fetch_params = params.copy()
+                fetch_params['maxResults'] = min(target_results_count - len(all_videos), 50)
+                if next_page_token:
+                    fetch_params['pageToken'] = next_page_token
+
+                response = requests.get(url, params=fetch_params)
+                response.raise_for_status()
+                data = response.json()
+
+                all_videos.extend(data.get('items', []))
+                total_results = data.get('pageInfo', {}).get('totalResults', 0)
 
                 next_page_token = data.get('nextPageToken')
-
-                # If there's no next page, we can't continue.
                 if not next_page_token:
-                    total_results = data.get('pageInfo', {}).get('totalResults', 0)
-                    return [], total_results
+                    break
 
-            # Should not be reached if search_request.page >= 1
-            return [], 0
+            return all_videos, total_results
 
         return self._execute_with_key_rotation(_make_search_request)
 

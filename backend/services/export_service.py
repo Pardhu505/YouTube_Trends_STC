@@ -87,6 +87,7 @@ class ExportService:
             title_style = ParagraphStyle(
                 'CustomTitle',
                 parent=styles['Title'],
+                fontName=DEFAULT_FONT_BOLD,
                 fontSize=20,
                 spaceAfter=30,
                 textColor=colors.darkred
@@ -95,6 +96,7 @@ class ExportService:
             heading_style = ParagraphStyle(
                 'CustomHeading',
                 parent=styles['Heading2'],
+                fontName=DEFAULT_FONT_BOLD,
                 fontSize=14,
                 spaceAfter=12,
                 textColor=colors.darkblue
@@ -191,9 +193,10 @@ class ExportService:
                 Paragraph('<b>Sentiment</b>', cell_style)
             ]]
             
-            for video in videos[:20]:  # Limit to first 20 videos for PDF
+            for video in videos[:200]:  # Limit to first 200 videos for PDF
+                title_with_link = f'<a href="{video.url}" color="blue">{video.title}</a>'
                 table_data.append([
-                    Paragraph(video.title, cell_style),
+                    Paragraph(title_with_link, cell_style),
                     Paragraph(video.channel, cell_style),
                     f"{video.views:,}",
                     f"{video.likes:,}",
@@ -220,9 +223,9 @@ class ExportService:
             story.append(video_table)
             
             # Add note if more videos exist
-            if len(videos) > 20:
+            if len(videos) > 200:
                 story.append(Spacer(1, 12))
-                story.append(Paragraph(f"Note: Showing first 20 videos out of {len(videos)} total results.", styles['Normal']))
+                story.append(Paragraph(f"Note: Showing first 200 videos out of {len(videos)} total results.", styles['Normal']))
             
             # Build PDF
             doc.build(story)

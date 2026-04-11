@@ -219,7 +219,7 @@ async def export_pdf(search_request: VideoSearchRequest):
             raise HTTPException(status_code=404, detail="No videos found for export")
         
         # Limit videos for PDF to prevent memory issues
-        limited_videos = videos[:20]  # Limit to 20 videos for PDF
+        limited_videos = videos[:200]  # Limit to 200 videos for PDF
         
         # Generate PDF with memory optimization
         pdf_content = export_service.export_to_pdf(limited_videos, search_request.dict())
