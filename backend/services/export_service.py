@@ -20,14 +20,19 @@ def register_fonts():
     # Potential paths for FreeSans font in various environments
     font_paths = [
         "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", # Fallback
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", # Another common fallback
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
     ]
 
     font_bold_paths = [
         "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
     ]
 
     registered_name = 'Helvetica'
@@ -84,8 +89,11 @@ class ExportService:
             
             # Write data
             for video in videos:
+                # Use Excel formula for hyperlinks in CSV
+                # Note: This works in most spreadsheet applications like Excel or Google Sheets
+                hyperlink_title = f'=HYPERLINK("{video.url}","{video.title.replace('"', '""')}")'
                 writer.writerow([
-                    video.title,
+                    hyperlink_title,
                     video.channel,
                     video.views,
                     video.likes,

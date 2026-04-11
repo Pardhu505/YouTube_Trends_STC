@@ -152,10 +152,11 @@ function App() {
         description: `Your report is being generated in ${format.toUpperCase()} format.`,
       });
 
+      const exportParams = { ...currentSearchParams, page_size: pageSize };
       if (format === 'csv') {
-        await youtubeAPI.exportCSV(currentSearchParams);
+        await youtubeAPI.exportCSV(exportParams);
       } else if (format === 'pdf') {
-        await youtubeAPI.exportPDF(currentSearchParams);
+        await youtubeAPI.exportPDF(exportParams);
       }
 
       toast({
