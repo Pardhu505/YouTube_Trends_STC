@@ -18,7 +18,7 @@ function App() {
   const [currentSearchParams, setCurrentSearchParams] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(200);
   const { toast } = useToast();
 
   const calculateSummary = (videos) => {
