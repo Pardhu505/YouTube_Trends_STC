@@ -9,7 +9,7 @@ class VideoSearchRequest(BaseModel):
     endDate: str
     region: str = "IN"
     page: int = 1
-    page_size: int = 10
+    page_size: int = 200
 
 class VideoResponse(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
