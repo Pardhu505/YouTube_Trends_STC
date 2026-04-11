@@ -5,6 +5,9 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
 from typing import List
 from models.video import VideoResponse
 from datetime import datetime
@@ -12,41 +15,54 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Register a font that supports Hindi characters
+try:
+    font_path = "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+    if os.path.exists(font_path):
+        pdfmetrics.registerFont(TTFont('FreeSans', font_path))
+        pdfmetrics.registerFont(TTFont('FreeSans-Bold', "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"))
+        DEFAULT_FONT = 'FreeSans'
+        DEFAULT_FONT_BOLD = 'FreeSans-Bold'
+    else:
+        logger.warning(f"Font file not found at {font_path}. Using default fonts.")
+        DEFAULT_FONT = 'Helvetica'
+        DEFAULT_FONT_BOLD = 'Helvetica-Bold'
+except Exception as e:
+    logger.error(f"Error registering font: {e}")
+    DEFAULT_FONT = 'Helvetica'
+    DEFAULT_FONT_BOLD = 'Helvetica-Bold'
+
 class ExportService:
     
     def export_to_csv(self, videos: List[VideoResponse], search_params: dict) -> str:
         """
-        Export video data to CSV format
+        Export video data to CSV format with UTF-8 BOM for Excel compatibility
         """
         try:
             output = io.StringIO()
+            # Add UTF-8 BOM
+            output.write('\ufeff')
             writer = csv.writer(output)
             
-            # Write header
+            # Write header - matching the "Video Details" table in the image
             writer.writerow([
-                'Timestamp',
                 'Title',
                 'Channel',
-                'Description',
                 'Views',
                 'Likes',
                 'Comments',
-                'Sentiment',
-                'URL'
+                'Sentiment'
             ])
             
             # Write data
             for video in videos:
                 writer.writerow([
-                    video.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                     video.title,
                     video.channel,
-                    video.description,
                     video.views,
                     video.likes,
                     video.comments,
-                    video.sentiment,
-                    video.url
+                    video.sentiment
                 ])
             
             csv_content = output.getvalue()
@@ -106,7 +122,7 @@ class ExportService:
                 ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
                 ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
                 ('BACKGROUND', (1, 0), (1, -1), colors.white),
@@ -144,7 +160,7 @@ class ExportService:
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT_BOLD),
                 ('FONTSIZE', (0, 0), (-1, 0), 12),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
@@ -157,13 +173,28 @@ class ExportService:
             # Video details table
             story.append(Paragraph("Video Details", heading_style))
             
+            # Style for wrapped text in table cells
+            cell_style = ParagraphStyle(
+                'TableCell',
+                fontName=DEFAULT_FONT,
+                fontSize=8,
+                leading=10
+            )
+
             # Prepare table data
-            table_data = [['Title', 'Channel', 'Views', 'Likes', 'Comments', 'Sentiment']]
+            table_data = [[
+                Paragraph('<b>Title</b>', cell_style),
+                Paragraph('<b>Channel</b>', cell_style),
+                Paragraph('<b>Views</b>', cell_style),
+                Paragraph('<b>Likes</b>', cell_style),
+                Paragraph('<b>Comments</b>', cell_style),
+                Paragraph('<b>Sentiment</b>', cell_style)
+            ]]
             
             for video in videos[:20]:  # Limit to first 20 videos for PDF
                 table_data.append([
-                    video.title[:40] + '...' if len(video.title) > 40 else video.title,
-                    video.channel[:20] + '...' if len(video.channel) > 20 else video.channel,
+                    Paragraph(video.title, cell_style),
+                    Paragraph(video.channel, cell_style),
                     f"{video.views:,}",
                     f"{video.likes:,}",
                     f"{video.comments:,}",
@@ -171,18 +202,19 @@ class ExportService:
                 ])
             
             # Create table
-            video_table = Table(table_data, colWidths=[2.5*inch, 1.5*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch])
+            video_table = Table(table_data, colWidths=[2.5*inch, 1.5*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch], repeatRows=1)
             video_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkgrey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT_BOLD),
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('FONTNAME', (0, 1), (-1, -1), DEFAULT_FONT),
                 ('FONTSIZE', (0, 1), (-1, -1), 8),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.lightgrey, colors.white])
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white])
             ]))
             
             story.append(video_table)
