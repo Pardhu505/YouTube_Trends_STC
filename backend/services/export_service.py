@@ -17,22 +17,26 @@ logger = logging.getLogger(__name__)
 
 # Register a font that supports Hindi characters
 def register_fonts():
-    # Potential paths for FreeSans font in various environments
+    # Bundled fonts in the repository take precedence
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    bundled_regular = os.path.join(base_dir, "fonts", "NotoSansDevanagari-Regular.ttf")
+    bundled_bold = os.path.join(base_dir, "fonts", "NotoSansDevanagari-Bold.ttf")
+
+    # Potential paths for various environments
     font_paths = [
+        bundled_regular,
         "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-        "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
-        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
     ]
 
     font_bold_paths = [
+        bundled_bold,
         "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
-        "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
     ]
 
     registered_name = 'Helvetica'
@@ -90,10 +94,13 @@ class ExportService:
             # Write data
             for video in videos:
                 # Use Excel formula for hyperlinks in CSV
-                # Note: This works in most spreadsheet applications like Excel or Google Sheets
-                hyperlink_title = f'=HYPERLINK("{video.url}","{video.title.replace('"', '""')}")'
+                # Clean title to avoid formula breaking (Excel allows up to 255 chars in HYPERLINK text sometimes,
+                # but let's just make sure quotes are handled)
+                clean_title = video.title.replace('"', '""')
+                hyperlink_formula = f'=HYPERLINK("{video.url}","{clean_title}")'
+
                 writer.writerow([
-                    hyperlink_title,
+                    hyperlink_formula,
                     video.channel,
                     video.views,
                     video.likes,
