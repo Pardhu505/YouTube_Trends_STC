@@ -173,23 +173,31 @@ class YouTubeService:
 
     def _get_video_details(self, video_ids: List[str]) -> List[dict]:
         """
-        Get detailed information about videos including statistics
+        Get detailed information about videos including statistics.
+        Batches requests in chunks of 50 to comply with YouTube API limits.
         """
-        def _make_details_request(api_key):
-            url = f"{self.base_url}/videos"
+        all_details = []
+        # YouTube API allows maximum 50 IDs per request
+        chunk_size = 50
 
-            params = {
-                'key': api_key,
-                'part': 'snippet,statistics',
-                'id': ','.join(video_ids)
-            }
+        for i in range(0, len(video_ids), chunk_size):
+            chunk = video_ids[i:i + chunk_size]
 
-            response = requests.get(url, params=params)
-            response.raise_for_status()
+            def _make_details_request(api_key, chunk_ids=chunk):
+                url = f"{self.base_url}/videos"
+                params = {
+                    'key': api_key,
+                    'part': 'snippet,statistics',
+                    'id': ','.join(chunk_ids)
+                }
+                response = requests.get(url, params=params)
+                response.raise_for_status()
+                return response.json().get('items', [])
 
-            return response.json().get('items', [])
+            details_chunk = self._execute_with_key_rotation(_make_details_request)
+            all_details.extend(details_chunk)
 
-        return self._execute_with_key_rotation(_make_details_request)
+        return all_details
 
     def _convert_to_video_response(self, video: dict, keywords: str) -> Optional[VideoResponse]:
         """

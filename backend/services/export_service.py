@@ -16,21 +16,49 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Register a font that supports Hindi characters
-try:
-    font_path = "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
-    if os.path.exists(font_path):
-        pdfmetrics.registerFont(TTFont('FreeSans', font_path))
-        pdfmetrics.registerFont(TTFont('FreeSans-Bold', "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"))
-        DEFAULT_FONT = 'FreeSans'
-        DEFAULT_FONT_BOLD = 'FreeSans-Bold'
-    else:
-        logger.warning(f"Font file not found at {font_path}. Using default fonts.")
-        DEFAULT_FONT = 'Helvetica'
-        DEFAULT_FONT_BOLD = 'Helvetica-Bold'
-except Exception as e:
-    logger.error(f"Error registering font: {e}")
-    DEFAULT_FONT = 'Helvetica'
-    DEFAULT_FONT_BOLD = 'Helvetica-Bold'
+def register_fonts():
+    # Potential paths for FreeSans font in various environments
+    font_paths = [
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", # Fallback
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", # Another common fallback
+    ]
+
+    font_bold_paths = [
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ]
+
+    registered_name = 'Helvetica'
+    registered_bold_name = 'Helvetica-Bold'
+
+    try:
+        # Try to find and register the main font
+        for path in font_paths:
+            if os.path.exists(path):
+                pdfmetrics.registerFont(TTFont('CustomFont', path))
+                registered_name = 'CustomFont'
+                logger.info(f"Registered main font from {path}")
+                break
+
+        # Try to find and register the bold font
+        for path in font_bold_paths:
+            if os.path.exists(path):
+                pdfmetrics.registerFont(TTFont('CustomFont-Bold', path))
+                registered_bold_name = 'CustomFont-Bold'
+                logger.info(f"Registered bold font from {path}")
+                break
+
+        if registered_name == 'Helvetica':
+            logger.warning("No suitable TrueType font found for Hindi support. Using Helvetica.")
+
+    except Exception as e:
+        logger.error(f"Error registering font: {e}")
+
+    return registered_name, registered_bold_name
+
+DEFAULT_FONT, DEFAULT_FONT_BOLD = register_fonts()
 
 class ExportService:
     
