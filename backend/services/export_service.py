@@ -81,7 +81,7 @@ class ExportService:
             val = count / 1_000
             if val >= 100:
                 return f"{val:.1f}K"
-            return f"{val:.1f}K" # Matching dashboard style
+            return f"{val:.1f}K"
         return str(count)
 
     def _get_image(self, url: str):
@@ -93,8 +93,6 @@ class ExportService:
             if resp.status_code == 200:
                 img_data = io.BytesIO(resp.content)
                 img = RLImage(img_data)
-                # Resize thumbnail - standard YT is 120x90 or 480x360.
-                # We want it small for the table.
                 img.drawHeight = 0.6 * inch
                 img.drawWidth = 0.8 * inch
                 return img
@@ -108,11 +106,9 @@ class ExportService:
         """
         try:
             output = io.StringIO()
-            # Add UTF-8 BOM
             output.write('\ufeff')
             writer = csv.writer(output)
             
-            # Write header
             writer.writerow([
                 'Timestamp',
                 'Title',
@@ -121,12 +117,11 @@ class ExportService:
                 'Likes',
                 'Comments',
                 'Sentiment',
-                'Description',
                 'URL',
-                'Thumbnail URL'
+                'Thumbnail URL',
+                'Description'
             ])
             
-            # Write data
             for video in videos:
                 clean_title = video.title.replace('"', '""')
                 hyperlink_formula = f'=HYPERLINK("{video.url}","{clean_title}")'
@@ -139,14 +134,13 @@ class ExportService:
                     video.likes,
                     video.comments,
                     video.sentiment,
-                    video.description,
                     video.url,
-                    video.thumbnail
+                    video.thumbnail,
+                    video.description
                 ])
             
             csv_content = output.getvalue()
             output.close()
-            
             return csv_content
             
         except Exception as e:
@@ -159,7 +153,6 @@ class ExportService:
         """
         try:
             buffer = io.BytesIO()
-            # Use Landscape for better table fit
             doc = SimpleDocTemplate(buffer, pagesize=landscape(A4),
                                   rightMargin=30, leftMargin=30,
                                   topMargin=30, bottomMargin=30)
@@ -171,11 +164,21 @@ class ExportService:
                 'CustomTitle',
                 parent=styles['Title'],
                 fontName=DEFAULT_FONT_BOLD,
-                fontSize=18,
+                fontSize=20,
                 spaceAfter=20,
-                textColor=colors.darkblue
+                textColor=colors.darkblue,
+                alignment=TA_LEFT
             )
             
+            section_header_style = ParagraphStyle(
+                'SectionHeader',
+                fontName=DEFAULT_FONT_BOLD,
+                fontSize=14,
+                spaceBefore=15,
+                spaceAfter=10,
+                textColor=colors.darkblue
+            )
+
             header_style = ParagraphStyle(
                 'TableHeader',
                 fontName=DEFAULT_FONT_BOLD,
@@ -191,7 +194,6 @@ class ExportService:
                 alignment=TA_CENTER
             )
 
-            # Video Content Styles
             v_title_style = ParagraphStyle(
                 'VideoTitle',
                 fontName=DEFAULT_FONT_BOLD,
@@ -221,10 +223,64 @@ class ExportService:
 
             story = []
 
-            story.append(Paragraph(f"YouTube Analysis Report - {search_params.get('keywords', 'General')}", title_style))
+            story.append(Paragraph("YouTube Trends Analysis Report", title_style))
 
-            # Prepare Table Data
-            # Header
+            # 1. Search Parameters Table
+            story.append(Paragraph("Search Parameters", section_header_style))
+            param_data = [
+                [Paragraph('Keywords:', header_style), search_params.get('keywords', 'N/A')],
+                [Paragraph('Date Range:', header_style), f"{search_params.get('startDate', 'N/A')} to {search_params.get('endDate', 'N/A')}"],
+                [Paragraph('Total Videos:', header_style), str(len(videos))],
+                [Paragraph('Generated:', header_style), datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+            ]
+            param_table = Table(param_data, colWidths=[2*inch, 4*inch])
+            param_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.whitesmoke),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+                ('FONTNAME', (1, 0), (1, -1), DEFAULT_FONT),
+                ('FONTSIZE', (1, 0), (1, -1), 10),
+                ('LEFTPADDING', (1, 0), (1, -1), 10),
+            ]))
+            story.append(param_table)
+            story.append(Spacer(1, 15))
+
+            # 2. Analytics Summary Table
+            story.append(Paragraph("Analytics Summary", section_header_style))
+            total_views = sum(video.views for video in videos)
+            total_likes = sum(video.likes for video in videos)
+            total_comments = sum(video.comments for video in videos)
+
+            sentiment_counts = {'Positive': 0, 'Negative': 0, 'Neutral': 0}
+            for v in videos:
+                sentiment_counts[v.sentiment] = sentiment_counts.get(v.sentiment, 0) + 1
+
+            summary_data = [
+                [Paragraph('Metric', header_style), Paragraph('Value', header_style)],
+                ['Total Views', f"{total_views:,}"],
+                ['Total Likes', f"{total_likes:,}"],
+                ['Total Comments', f"{total_comments:,}"],
+                ['Average Views per Video', f"{total_views // len(videos) if videos else 0:,}"],
+                ['Positive Sentiment', f"{sentiment_counts['Positive']} videos"],
+                ['Negative Sentiment', f"{sentiment_counts['Negative']} videos"],
+                ['Neutral Sentiment', f"{sentiment_counts['Neutral']} videos"]
+            ]
+            summary_table = Table(summary_data, colWidths=[3*inch, 3*inch])
+            summary_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkgrey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), DEFAULT_FONT),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ]))
+            story.append(summary_table)
+            story.append(Spacer(1, 20))
+
+            # 3. Video Details Table
+            story.append(Paragraph("Video Details", section_header_style))
             table_data = [[
                 Paragraph('Timestamp', header_style),
                 Paragraph('Video Content', header_style),
@@ -235,17 +291,12 @@ class ExportService:
             ]]
             
             for video in videos[:200]:
-                # 1. Timestamp Column
-                # Match image: 13 Apr 2026, 03:11 pm
                 ts_date = video.timestamp.strftime('%d %b %Y,')
                 ts_time = video.timestamp.strftime('%I:%M %p').lower()
-                ts_str = f"{ts_date}\n{ts_time}"
-                ts_para = Paragraph(ts_str, timestamp_style)
+                ts_para = Paragraph(f"{ts_date}<br/>{ts_time}", timestamp_style)
 
-                # 2. Video Content Column (Nested Table: [Thumbnail | Text])
                 thumb = self._get_image(video.thumbnail)
                 if not thumb:
-                    # Fallback if image fails
                     thumb = Paragraph("", v_desc_style)
 
                 content_text = [
@@ -254,7 +305,6 @@ class ExportService:
                     Paragraph(video.description[:150] + "..." if len(video.description) > 150 else video.description, v_desc_style)
                 ]
 
-                # Nested table for the "Video Content" cell to put thumbnail next to text
                 inner_table = Table([[thumb, content_text]], colWidths=[0.9*inch, 5.0*inch])
                 inner_table.setStyle(TableStyle([
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -264,12 +314,10 @@ class ExportService:
                     ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
                 ]))
 
-                # 3, 4, 5. Metrics
                 v_views = Paragraph(self._format_count(video.views), views_style)
                 v_likes = Paragraph(self._format_count(video.likes), likes_style)
                 v_comments = Paragraph(str(video.comments), comments_style)
 
-                # 6. Sentiment Pill
                 sent_color = colors.lightgrey
                 sent_text_color = colors.black
                 if video.sentiment == 'Positive':
@@ -300,12 +348,8 @@ class ExportService:
                     v_sentiment
                 ])
 
-            # Main Table
-            # Total width for Landscape A4 (11.69in) minus margins (approx 1in total) = ~10.6in
-            # Timstamp: 1.0, Video Content: 6.0, Views: 0.8, Likes: 0.8, Comments: 0.8, Sentiment: 1.0 = 10.4
             col_widths = [1.1*inch, 6.0*inch, 0.8*inch, 0.8*inch, 0.8*inch, 1.0*inch]
             main_table = Table(table_data, colWidths=col_widths, repeatRows=1)
-            
             main_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
@@ -314,7 +358,7 @@ class ExportService:
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
                 ('TOPPADDING', (0, 0), (-1, -1), 10),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('ALIGN', (1, 0), (1, -1), 'LEFT'), # Video content left aligned
+                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
             ]))
 
             story.append(main_table)
