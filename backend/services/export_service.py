@@ -1,13 +1,15 @@
 import csv
 import io
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.pagesizes import landscape, A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
 from reportlab.lib.units import inch
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import os
+import requests
 from typing import List
 from models.video import VideoResponse
 from datetime import datetime
@@ -71,6 +73,35 @@ DEFAULT_FONT, DEFAULT_FONT_BOLD = register_fonts()
 
 class ExportService:
     
+    def _format_count(self, count: int) -> str:
+        """Formats numbers like 427300 to 427.3K"""
+        if count >= 1_000_000:
+            return f"{count / 1_000_000:.1f}M"
+        if count >= 1_000:
+            val = count / 1_000
+            if val >= 100:
+                return f"{val:.1f}K"
+            return f"{val:.1f}K" # Matching dashboard style
+        return str(count)
+
+    def _get_image(self, url: str):
+        """Fetch image from URL and return a ReportLab Image object"""
+        try:
+            if not url:
+                return None
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200:
+                img_data = io.BytesIO(resp.content)
+                img = RLImage(img_data)
+                # Resize thumbnail - standard YT is 120x90 or 480x360.
+                # We want it small for the table.
+                img.drawHeight = 0.6 * inch
+                img.drawWidth = 0.8 * inch
+                return img
+        except Exception as e:
+            logger.error(f"Error fetching thumbnail {url}: {e}")
+        return None
+
     def export_to_csv(self, videos: List[VideoResponse], search_params: dict) -> str:
         """
         Export video data to CSV format with UTF-8 BOM for Excel compatibility
@@ -81,31 +112,36 @@ class ExportService:
             output.write('\ufeff')
             writer = csv.writer(output)
             
-            # Write header - matching the "Video Details" table in the image
+            # Write header
             writer.writerow([
+                'Timestamp',
                 'Title',
                 'Channel',
                 'Views',
                 'Likes',
                 'Comments',
-                'Sentiment'
+                'Sentiment',
+                'Description',
+                'URL',
+                'Thumbnail URL'
             ])
             
             # Write data
             for video in videos:
-                # Use Excel formula for hyperlinks in CSV
-                # Clean title to avoid formula breaking (Excel allows up to 255 chars in HYPERLINK text sometimes,
-                # but let's just make sure quotes are handled)
                 clean_title = video.title.replace('"', '""')
                 hyperlink_formula = f'=HYPERLINK("{video.url}","{clean_title}")'
 
                 writer.writerow([
+                    video.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                     hyperlink_formula,
                     video.channel,
                     video.views,
                     video.likes,
                     video.comments,
-                    video.sentiment
+                    video.sentiment,
+                    video.description,
+                    video.url,
+                    video.thumbnail
                 ])
             
             csv_content = output.getvalue()
@@ -119,163 +155,177 @@ class ExportService:
     
     def export_to_pdf(self, videos: List[VideoResponse], search_params: dict) -> bytes:
         """
-        Export video data to PDF format with charts and professional formatting
+        Export video data to PDF format matching the dashboard layout
         """
         try:
             buffer = io.BytesIO()
-            doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=1*inch)
+            # Use Landscape for better table fit
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(A4),
+                                  rightMargin=30, leftMargin=30,
+                                  topMargin=30, bottomMargin=30)
             
-            # Styles
             styles = getSampleStyleSheet()
+
+            # Custom Styles
             title_style = ParagraphStyle(
                 'CustomTitle',
                 parent=styles['Title'],
                 fontName=DEFAULT_FONT_BOLD,
-                fontSize=20,
-                spaceAfter=30,
-                textColor=colors.darkred
-            )
-            
-            heading_style = ParagraphStyle(
-                'CustomHeading',
-                parent=styles['Heading2'],
-                fontName=DEFAULT_FONT_BOLD,
-                fontSize=14,
-                spaceAfter=12,
+                fontSize=18,
+                spaceAfter=20,
                 textColor=colors.darkblue
             )
             
-            # Build PDF content
-            story = []
-            
-            # Title
-            story.append(Paragraph("YouTube Trends Analysis Report", title_style))
-            story.append(Spacer(1, 20))
-            
-            # Search parameters
-            story.append(Paragraph("Search Parameters", heading_style))
-            param_data = [
-                ['Keywords:', search_params.get('keywords', 'N/A')],
-                ['Date Range:', f"{search_params.get('startDate', 'N/A')} to {search_params.get('endDate', 'N/A')}"],
-                ['Region:', search_params.get('region', 'N/A')],
-                ['Total Videos:', str(len(videos))],
-                ['Generated:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
-            ]
-            
-            param_table = Table(param_data, colWidths=[2*inch, 4*inch])
-            param_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-                ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                ('BACKGROUND', (1, 0), (1, -1), colors.white),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
-            
-            story.append(param_table)
-            story.append(Spacer(1, 30))
-            
-            # Summary statistics
-            story.append(Paragraph("Analytics Summary", heading_style))
-            
-            total_views = sum(video.views for video in videos)
-            total_likes = sum(video.likes for video in videos)
-            total_comments = sum(video.comments for video in videos)
-            
-            # Sentiment analysis
-            sentiment_counts = {}
-            for video in videos:
-                sentiment_counts[video.sentiment] = sentiment_counts.get(video.sentiment, 0) + 1
-            
-            summary_data = [
-                ['Metric', 'Value'],
-                ['Total Views', f"{total_views:,}"],
-                ['Total Likes', f"{total_likes:,}"],
-                ['Total Comments', f"{total_comments:,}"],
-                ['Average Views per Video', f"{total_views // len(videos) if videos else 0:,}"],
-                ['Positive Sentiment', f"{sentiment_counts.get('Positive', 0)} videos"],
-                ['Negative Sentiment', f"{sentiment_counts.get('Negative', 0)} videos"],
-                ['Neutral Sentiment', f"{sentiment_counts.get('Neutral', 0)} videos"]
-            ]
-            
-            summary_table = Table(summary_data, colWidths=[3*inch, 3*inch])
-            summary_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT_BOLD),
-                ('FONTSIZE', (0, 0), (-1, 0), 12),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
-            
-            story.append(summary_table)
-            story.append(Spacer(1, 30))
-            
-            # Video details table
-            story.append(Paragraph("Video Details", heading_style))
-            
-            # Style for wrapped text in table cells
-            cell_style = ParagraphStyle(
-                'TableCell',
-                fontName=DEFAULT_FONT,
-                fontSize=8,
-                leading=10
+            header_style = ParagraphStyle(
+                'TableHeader',
+                fontName=DEFAULT_FONT_BOLD,
+                fontSize=10,
+                textColor=colors.black,
+                alignment=TA_CENTER
             )
 
-            # Prepare table data
+            timestamp_style = ParagraphStyle(
+                'TimestampStyle',
+                fontName=DEFAULT_FONT,
+                fontSize=9,
+                alignment=TA_CENTER
+            )
+
+            # Video Content Styles
+            v_title_style = ParagraphStyle(
+                'VideoTitle',
+                fontName=DEFAULT_FONT_BOLD,
+                fontSize=10,
+                leading=12,
+                textColor=colors.black
+            )
+            v_channel_style = ParagraphStyle(
+                'VideoChannel',
+                fontName=DEFAULT_FONT,
+                fontSize=9,
+                leading=11,
+                textColor=colors.grey
+            )
+            v_desc_style = ParagraphStyle(
+                'VideoDesc',
+                fontName=DEFAULT_FONT,
+                fontSize=8,
+                leading=10,
+                textColor=colors.darkgrey
+            )
+
+            # Metrics Styles
+            views_style = ParagraphStyle('ViewsStyle', fontName=DEFAULT_FONT_BOLD, fontSize=10, textColor=colors.red, alignment=TA_CENTER)
+            likes_style = ParagraphStyle('LikesStyle', fontName=DEFAULT_FONT_BOLD, fontSize=10, textColor=colors.green, alignment=TA_CENTER)
+            comments_style = ParagraphStyle('CommentsStyle', fontName=DEFAULT_FONT_BOLD, fontSize=10, textColor=colors.blue, alignment=TA_CENTER)
+
+            story = []
+
+            story.append(Paragraph(f"YouTube Analysis Report - {search_params.get('keywords', 'General')}", title_style))
+
+            # Prepare Table Data
+            # Header
             table_data = [[
-                Paragraph('<b>Title</b>', cell_style),
-                Paragraph('<b>Channel</b>', cell_style),
-                Paragraph('<b>Views</b>', cell_style),
-                Paragraph('<b>Likes</b>', cell_style),
-                Paragraph('<b>Comments</b>', cell_style),
-                Paragraph('<b>Sentiment</b>', cell_style)
+                Paragraph('Timestamp', header_style),
+                Paragraph('Video Content', header_style),
+                Paragraph('Views', header_style),
+                Paragraph('Likes', header_style),
+                Paragraph('Comments', header_style),
+                Paragraph('Sentiment', header_style)
             ]]
             
-            for video in videos[:200]:  # Limit to first 200 videos for PDF
-                title_with_link = f'<a href="{video.url}" color="blue">{video.title}</a>'
+            for video in videos[:200]:
+                # 1. Timestamp Column
+                # Match image: 13 Apr 2026, 03:11 pm
+                ts_date = video.timestamp.strftime('%d %b %Y,')
+                ts_time = video.timestamp.strftime('%I:%M %p').lower()
+                ts_str = f"{ts_date}\n{ts_time}"
+                ts_para = Paragraph(ts_str, timestamp_style)
+
+                # 2. Video Content Column (Nested Table: [Thumbnail | Text])
+                thumb = self._get_image(video.thumbnail)
+                if not thumb:
+                    # Fallback if image fails
+                    thumb = Paragraph("", v_desc_style)
+
+                content_text = [
+                    Paragraph(f'<a href="{video.url}" color="black"><b>{video.title}</b></a>', v_title_style),
+                    Paragraph(video.channel, v_channel_style),
+                    Paragraph(video.description[:150] + "..." if len(video.description) > 150 else video.description, v_desc_style)
+                ]
+
+                # Nested table for the "Video Content" cell to put thumbnail next to text
+                inner_table = Table([[thumb, content_text]], colWidths=[0.9*inch, 5.0*inch])
+                inner_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                    ('TOPPADDING', (0, 0), (-1, -1), 2),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+                ]))
+
+                # 3, 4, 5. Metrics
+                v_views = Paragraph(self._format_count(video.views), views_style)
+                v_likes = Paragraph(self._format_count(video.likes), likes_style)
+                v_comments = Paragraph(str(video.comments), comments_style)
+
+                # 6. Sentiment Pill
+                sent_color = colors.lightgrey
+                sent_text_color = colors.black
+                if video.sentiment == 'Positive':
+                    sent_color = colors.honeydew
+                    sent_text_color = colors.green
+                elif video.sentiment == 'Negative':
+                    sent_color = colors.mistyrose
+                    sent_text_color = colors.red
+
+                sent_style = ParagraphStyle(
+                    'SentStyle',
+                    fontName=DEFAULT_FONT,
+                    fontSize=9,
+                    alignment=TA_CENTER,
+                    textColor=sent_text_color,
+                    backColor=sent_color,
+                    borderPadding=4,
+                    borderRadius=5
+                )
+                v_sentiment = Paragraph(video.sentiment, sent_style)
+
                 table_data.append([
-                    Paragraph(title_with_link, cell_style),
-                    Paragraph(video.channel, cell_style),
-                    f"{video.views:,}",
-                    f"{video.likes:,}",
-                    f"{video.comments:,}",
-                    video.sentiment
+                    ts_para,
+                    inner_table,
+                    v_views,
+                    v_likes,
+                    v_comments,
+                    v_sentiment
                 ])
+
+            # Main Table
+            # Total width for Landscape A4 (11.69in) minus margins (approx 1in total) = ~10.6in
+            # Timstamp: 1.0, Video Content: 6.0, Views: 0.8, Likes: 0.8, Comments: 0.8, Sentiment: 1.0 = 10.4
+            col_widths = [1.1*inch, 6.0*inch, 0.8*inch, 0.8*inch, 0.8*inch, 1.0*inch]
+            main_table = Table(table_data, colWidths=col_widths, repeatRows=1)
             
-            # Create table
-            video_table = Table(table_data, colWidths=[2.5*inch, 1.5*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch], repeatRows=1)
-            video_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.darkgrey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            main_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
+                ('LINEBELOW', (0, 0), (-1, 0), 1, colors.lightgrey),
+                ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.whitesmoke),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), DEFAULT_FONT_BOLD),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('FONTNAME', (0, 1), (-1, -1), DEFAULT_FONT),
-                ('FONTSIZE', (0, 1), (-1, -1), 8),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white])
+                ('ALIGN', (1, 0), (1, -1), 'LEFT'), # Video content left aligned
             ]))
+
+            story.append(main_table)
             
-            story.append(video_table)
-            
-            # Add note if more videos exist
             if len(videos) > 200:
-                story.append(Spacer(1, 12))
-                story.append(Paragraph(f"Note: Showing first 200 videos out of {len(videos)} total results.", styles['Normal']))
-            
-            # Build PDF
+                story.append(Spacer(1, 15))
+                story.append(Paragraph(f"Note: Report limited to top 200 videos. Total results found: {len(videos)}.", styles['Italic']))
+
             doc.build(story)
-            
             pdf_content = buffer.getvalue()
             buffer.close()
-            
             return pdf_content
             
         except Exception as e:
