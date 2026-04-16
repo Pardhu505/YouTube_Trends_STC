@@ -14,6 +14,7 @@ const Summary = ({ summary, totalResults, onPieClick }) => {
     average_engagement,
     total_views,
     total_likes,
+    total_comments,
     total_engagement,
   } = summary;
 
@@ -104,6 +105,12 @@ const Summary = ({ summary, totalResults, onPieClick }) => {
           <div>
             <p className="text-sm text-gray-600">Total Likes</p>
             <p className="text-2xl font-bold text-gray-900">{total_likes}</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+          <div>
+            <p className="text-sm text-gray-600">Total Comments</p>
+            <p className="text-2xl font-bold text-gray-900">{total_comments}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
