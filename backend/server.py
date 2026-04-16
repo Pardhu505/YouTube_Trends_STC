@@ -16,6 +16,7 @@ from datetime import datetime
 import io
 import asyncio
 import requests
+import json
 
 # Configure logging
 logging.basicConfig(
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Import our services and models
 from models.video import VideoSearchRequest, VideoResponse, SearchResponse
 from models.analytics import AnalyticsSummary, SentimentDistribution
-from services.youtube_service import YouTubeService
+from services.youtube_service import YouTubeService, YouTubeAPIError, YouTubeQuotaExceeded, YouTubeServiceBlocked
 from services.export_service import ExportService
 
 ROOT_DIR = Path(__file__).parent
@@ -75,6 +76,32 @@ app = FastAPI(
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+
+# Error handlers for custom YouTube exceptions
+@app.exception_handler(YouTubeQuotaExceeded)
+async def youtube_quota_exception_handler(request, exc):
+    return Response(
+        status_code=403,
+        content=json.dumps({"detail": exc.message, "reason": exc.reason}),
+        media_type="application/json"
+    )
+
+@app.exception_handler(YouTubeServiceBlocked)
+async def youtube_blocked_exception_handler(request, exc):
+    return Response(
+        status_code=403,
+        content=json.dumps({"detail": exc.message, "reason": exc.reason}),
+        media_type="application/json"
+    )
+
+@app.exception_handler(YouTubeAPIError)
+async def youtube_api_exception_handler(request, exc):
+    status_code = exc.status_code if exc.status_code else 500
+    return Response(
+        status_code=status_code,
+        content=json.dumps({"detail": exc.message, "reason": exc.reason}),
+        media_type="application/json"
+    )
 
 # Initialize services
 youtube_service = YouTubeService()
@@ -149,6 +176,8 @@ async def search_youtube_videos(search_request: VideoSearchRequest):
             search_params=search_request
         )
         
+    except (YouTubeAPIError, YouTubeQuotaExceeded, YouTubeServiceBlocked):
+        raise
     except requests.exceptions.HTTPError as e:
         logging.error(f"YouTube API Error: {str(e)}")
         if e.response.status_code == 403:
@@ -218,6 +247,8 @@ async def export_csv(search_request: VideoSearchRequest):
             headers={"Content-Disposition": "attachment; filename=youtube_trends_report.csv"}
         )
 
+    except (YouTubeAPIError, YouTubeQuotaExceeded, YouTubeServiceBlocked):
+        raise
     except requests.exceptions.HTTPError as e:
         logging.error(f"YouTube API Error during CSV export: {str(e)}")
         if e.response.status_code == 403:
@@ -258,6 +289,8 @@ async def export_pdf(search_request: VideoSearchRequest):
             headers={"Content-Disposition": "attachment; filename=youtube_trends_report.pdf"}
         )
 
+    except (YouTubeAPIError, YouTubeQuotaExceeded, YouTubeServiceBlocked):
+        raise
     except requests.exceptions.HTTPError as e:
         logging.error(f"YouTube API Error during PDF export: {str(e)}")
         if e.response.status_code == 403:

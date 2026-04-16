@@ -8,6 +8,22 @@ from google.auth.exceptions import DefaultCredentialsError
 
 logger = logging.getLogger(__name__)
 
+class YouTubeAPIError(Exception):
+    """Base exception for YouTube API errors"""
+    def __init__(self, message, status_code=None, reason=None):
+        self.message = message
+        self.status_code = status_code
+        self.reason = reason
+        super().__init__(self.message)
+
+class YouTubeQuotaExceeded(YouTubeAPIError):
+    """Exception raised when YouTube API quota is exceeded"""
+    pass
+
+class YouTubeServiceBlocked(YouTubeAPIError):
+    """Exception raised when the YouTube API service is blocked for the key"""
+    pass
+
 class YouTubeService:
     def __init__(self):
         self.api_keys = []
@@ -70,6 +86,7 @@ class YouTubeService:
         """
         attempts = 0
         max_attempts = len(self.api_keys) if self.api_keys else 1
+        last_error_details = None
 
         while attempts < max_attempts:
             current_key = self._get_current_key()
@@ -78,19 +95,42 @@ class YouTubeService:
                 return request_func(*args, **kwargs)
             except requests.exceptions.HTTPError as e:
                 status_code = e.response.status_code if getattr(e, 'response', None) is not None else None
-                # 403 (Quota exceeded) or 400 (Invalid key)
+
+                # Parse error response for better diagnostics
+                error_msg = str(e)
+                reason = None
+                try:
+                    error_data = e.response.json().get('error', {})
+                    error_msg = error_data.get('message', str(e))
+                    reason = error_data.get('errors', [{}])[0].get('reason', None)
+                except Exception:
+                    pass
+
+                last_error_details = {
+                    'status_code': status_code,
+                    'message': error_msg,
+                    'reason': reason
+                }
+
+                # 403 (Quota exceeded or blocked) or 400 (Invalid key)
                 if status_code in [403, 400]:
-                    logger.warning(f"YouTube API Error {status_code} with key {current_key[:10]}... Switching to next key.")
+                    logger.warning(f"YouTube API Error {status_code} ({reason}) with key {current_key[:10]}... Switching to next key. Error: {error_msg}")
                     self.current_key_index += 1
                     attempts += 1
                     if attempts >= max_attempts:
-                        logger.error("All available YouTube API keys have failed.")
-                        raise e
+                        logger.error(f"All available YouTube API keys have failed. Last error: {error_msg}")
+
+                        if reason == 'quotaExceeded':
+                            raise YouTubeQuotaExceeded(f"YouTube API quota exceeded: {error_msg}", status_code=status_code, reason=reason)
+                        elif reason == 'forbidden' or 'blocked' in error_msg.lower():
+                            raise YouTubeServiceBlocked(f"YouTube API key blocked or access forbidden: {error_msg}", status_code=status_code, reason=reason)
+                        else:
+                            raise YouTubeAPIError(f"YouTube API Error: {error_msg}", status_code=status_code, reason=reason)
                 else:
                     # Other HTTP errors (e.g., 500) are raised immediately
                     raise e
 
-        raise Exception("Failed to execute request after exhausting API keys.")
+        raise YouTubeAPIError("Failed to execute request after exhausting API keys.")
 
     def _search_videos_api(self, search_request: VideoSearchRequest) -> Tuple[List[dict], int]:
         """
