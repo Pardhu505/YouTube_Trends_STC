@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -61,6 +62,55 @@ const ResultsTable = ({ data, onExport, onPageChange, currentPage, totalResults,
     }
   });
 
+  // ─── FIXED EXCEL EXPORT ───────────────────────────────────────────────────
+  const handleExport = (type) => {
+    if (type === 'csv') {
+      // Build worksheet rows
+      const rows = data.map((video, i) => ({
+        '#': i + 1,
+        'Timestamp': new Date(video.timestamp).toLocaleString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        'Title': video.title,
+        'Channel': video.channel,
+        'Description': video.description,
+        'Views': video.views,
+        'Likes': video.likes,
+        'Comments': video.comments,
+        'Sentiment': video.sentiment,
+        'URL': { f: `HYPERLINK("${video.url}","Open Video")` }
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+
+      // Column widths
+      ws['!cols'] = [
+        { wch: 4 },   // #
+        { wch: 22 },  // Timestamp
+        { wch: 55 },  // Title
+        { wch: 20 },  // Channel
+        { wch: 60 },  // Description
+        { wch: 12 },  // Views
+        { wch: 10 },  // Likes
+        { wch: 12 },  // Comments
+        { wch: 12 },  // Sentiment
+        { wch: 16 },  // URL
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'YouTube Trends');
+      XLSX.writeFile(wb, 'youtube_trends.xlsx');
+    } else {
+      // PDF export — keep your existing handler
+      onExport(type);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <Card className="shadow-xl bg-white border-0">
       <CardHeader className="bg-gradient-to-r from-red-50 to-red-100 rounded-t-lg">
@@ -71,7 +121,7 @@ const ResultsTable = ({ data, onExport, onPageChange, currentPage, totalResults,
           </CardTitle>
           <div className="flex space-x-2">
             <Button
-              onClick={() => onExport('csv')}
+              onClick={() => handleExport('csv')}
               variant="outline"
               size="sm"
               className="border-red-300 text-red-700 hover:bg-red-50"
@@ -80,7 +130,7 @@ const ResultsTable = ({ data, onExport, onPageChange, currentPage, totalResults,
               Export CSV
             </Button>
             <Button
-              onClick={() => onExport('pdf')}
+              onClick={() => handleExport('pdf')}
               variant="outline"
               size="sm"
               className="border-red-300 text-red-700 hover:bg-red-50"
