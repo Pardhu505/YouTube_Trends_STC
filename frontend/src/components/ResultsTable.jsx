@@ -63,6 +63,12 @@ const ResultsTable = ({ data, onExport, onPageChange, currentPage, totalResults,
   });
 
   // ─── FIXED EXCEL EXPORT ───────────────────────────────────────────────────
+  const cleanTitle = (title) => {
+    // Strip =HYPERLINK("url","title") if backend has already injected it
+    const match = title && title.match(/^=HYPERLINK\("[^"]*",\s*"(.*)"\)$/i);
+    return match ? match[1] : title;
+  };
+
   const handleExport = (type) => {
     if (type === 'csv') {
       // Build worksheet rows
@@ -75,7 +81,7 @@ const ResultsTable = ({ data, onExport, onPageChange, currentPage, totalResults,
           hour: '2-digit',
           minute: '2-digit'
         }),
-        'Title': video.title,
+        'Title': cleanTitle(video.title),
         'Channel': video.channel,
         'Description': video.description,
         'Views': video.views,
@@ -99,6 +105,19 @@ const ResultsTable = ({ data, onExport, onPageChange, currentPage, totalResults,
         { wch: 12 },  // Comments
         { wch: 12 },  // Sentiment
         { wch: 16 },  // URL
+      ];
+
+      // Auto row height based on longest content in title/description
+      const CHAR_PER_LINE = 80;
+      const LINE_HEIGHT = 15;
+      ws['!rows'] = [
+        { hpt: 20 },
+        ...rows.map((row) => {
+          const descLines = Math.ceil((row['Description'] || '').length / CHAR_PER_LINE);
+          const titleLines = Math.ceil((row['Title'] || '').length / CHAR_PER_LINE);
+          const lines = Math.max(descLines, titleLines, 1);
+          return { hpt: Math.max(lines * LINE_HEIGHT, 30) };
+        })
       ];
 
       const wb = XLSX.utils.book_new();
