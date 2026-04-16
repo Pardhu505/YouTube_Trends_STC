@@ -64,6 +64,11 @@ chainlit.md
 # Data and databases
 agenthub/agents/youtube/db
 
+# Application specific
+backend/.env
+backend.log
+backend_test_results.json
+
 # Archive files and large assets
 **/*.zip
 **/*.tar.gz

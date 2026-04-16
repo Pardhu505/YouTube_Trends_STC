@@ -29,7 +29,7 @@ def get_backend_url():
         print(f"Error reading frontend .env: {e}")
     return "http://localhost:8001"
 
-BACKEND_URL = get_backend_url()
+BACKEND_URL = os.environ.get('BACKEND_URL', get_backend_url())
 API_BASE = f"{BACKEND_URL}/api"
 
 class YouTubeBackendTester:
