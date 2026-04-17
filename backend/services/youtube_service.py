@@ -27,7 +27,7 @@ class YouTubeServiceBlocked(YouTubeAPIError):
 class YouTubeService:
     def __init__(self):
         self.api_keys = []
-        env_keys = 'AIzaSyBe207vTnNR3SoJTpp1O9ObojwA7aKMq8E'
+        env_keys = 'AIzaSyDarVqyq1RY4M0qtivqZlqOXIsJhhhvTGc'
         if env_keys:
             self.api_keys.extend([k.strip() for k in env_keys.split(',') if k.strip()])
 
