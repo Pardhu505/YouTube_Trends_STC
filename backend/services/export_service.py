@@ -61,8 +61,13 @@ def register_fonts():
                 logger.info(f"Registered bold font from {path}")
                 break
 
-        if registered_name == 'Helvetica':
-            logger.warning("No suitable TrueType font found for Hindi support. Using Helvetica.")
+        # Special case: If we are on Windows and haven't found a font yet, check for common Windows fonts
+        if registered_name == 'Helvetica' and os.name == 'nt':
+            windows_indic = "C:\\Windows\\Fonts\\Nirmala.ttf"
+            if os.path.exists(windows_indic):
+                pdfmetrics.registerFont(TTFont('CustomFont', windows_indic))
+                registered_name = 'CustomFont'
+                logger.info(f"Registered Windows Indic font: {windows_indic}")
 
     except Exception as e:
         logger.error(f"Error registering font: {e}")
@@ -89,7 +94,7 @@ class ExportService:
         try:
             if not url:
                 return None
-            resp = requests.get(url, timeout=5)
+            resp = requests.get(url, timeout=2) # Reduced timeout for faster generation
             if resp.status_code == 200:
                 img_data = io.BytesIO(resp.content)
                 img = RLImage(img_data)
@@ -181,10 +186,18 @@ class ExportService:
 
             header_style = ParagraphStyle(
                 'TableHeader',
-                fontName=DEFAULT_FONT_BOLD,
+                fontName='Helvetica-Bold', # Use standard font for English headers 
                 fontSize=10,
                 textColor=colors.black,
                 alignment=TA_CENTER
+            )
+
+            label_style = ParagraphStyle(
+                'LabelStyle',
+                fontName='Helvetica-Bold',
+                fontSize=10,
+                textColor=colors.black,
+                alignment=TA_LEFT
             )
 
             timestamp_style = ParagraphStyle(
@@ -228,20 +241,21 @@ class ExportService:
             # 1. Search Parameters Table
             story.append(Paragraph("Search Parameters", section_header_style))
             param_data = [
-                [Paragraph('Keywords:', header_style), search_params.get('keywords', 'N/A')],
-                [Paragraph('Date Range:', header_style), f"{search_params.get('startDate', 'N/A')} to {search_params.get('endDate', 'N/A')}"],
-                [Paragraph('Total Videos:', header_style), str(len(videos))],
-                [Paragraph('Generated:', header_style), datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+                [Paragraph('Keywords', label_style), search_params.get('keywords', 'N/A')],
+                [Paragraph('Date Range', label_style), f"{search_params.get('startDate', 'N/A')} to {search_params.get('endDate', 'N/A')}"],
+                [Paragraph('Total Videos', label_style), str(len(videos))],
+                [Paragraph('Generated', label_style), datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
             ]
-            param_table = Table(param_data, colWidths=[2*inch, 4*inch])
+            param_table = Table(param_data, colWidths=[1.5*inch, 5.0*inch])
             param_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (0, -1), colors.whitesmoke),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('BACKGROUND', (0, 0), (0, -1), colors.lavender),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
                 ('FONTNAME', (1, 0), (1, -1), DEFAULT_FONT),
-                ('FONTSIZE', (1, 0), (1, -1), 10),
-                ('LEFTPADDING', (1, 0), (1, -1), 10),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('LEFTPADDING', (0, 0), (-1, -1), 10),
             ]))
             story.append(param_table)
             story.append(Spacer(1, 15))
@@ -265,15 +279,17 @@ class ExportService:
                 ['Comments', f"{total_comments:,}", f"{avg_comments:,}"],
                 ['Total Engagement', f"{total_engagement:,}", 'N/A']
             ]
-            perf_table = Table(perf_data, colWidths=[2.5*inch, 2.5*inch, 2.5*inch])
+            perf_table = Table(perf_data, colWidths=[2.6*inch, 2.6*inch, 2.6*inch])
             perf_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 1), (-1, -1), DEFAULT_FONT),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
             ]))
             story.append(perf_table)
             story.append(Spacer(1, 15))
@@ -295,14 +311,17 @@ class ExportService:
                  str(sentiment_counts['Neutral']), f"{(sentiment_counts['Neutral']/total_v*100):.1f}%" if total_v > 0 else "0%"]
             ]
             
-            sent_table = Table(sent_data, colWidths=[2.5*inch, 2.5*inch, 2.5*inch])
+            sent_table = Table(sent_data, colWidths=[2.6*inch, 2.6*inch, 2.6*inch])
             sent_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.darkgrey),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.slategray),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 1), (-1, -1), DEFAULT_FONT),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
             ]))
             story.append(sent_table)
             story.append(Spacer(1, 20))
@@ -319,16 +338,16 @@ class ExportService:
                 Paragraph('Link', header_style)
             ]]
             
-            # Limit to 100 videos to prevent memory issues and timeouts on Render
-            pdf_limit = 100
+            # Limit to 500 videos for general reports; if more needed, user can adjust
+            pdf_limit = 500
             for i, video in enumerate(videos[:pdf_limit]):
                 ts_date = video.timestamp.strftime('%d %b %Y,')
                 ts_time = video.timestamp.strftime('%I:%M %p').lower()
                 ts_para = Paragraph(f"{ts_date}<br/>{ts_time}", timestamp_style)
 
-                # Only fetch thumbnails for the first 25 videos to ensure fast generation
+                # Only fetch thumbnails for the first 50 videos to ensure fast generation
                 thumb = None
-                if i < 25:
+                if i < 50:
                     thumb = self._get_image(video.thumbnail)
                 
                 if not thumb:
@@ -390,13 +409,16 @@ class ExportService:
             main_table = Table(table_data, colWidths=col_widths, repeatRows=1)
             main_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
-                ('LINEBELOW', (0, 0), (-1, 0), 1, colors.lightgrey),
-                ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.whitesmoke),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue), # Dark blue header
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke), # White text for header
+                ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+                ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.lightgrey),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), # Header row
+                ('GRID', (0, 0), (-1, 0), 0.5, colors.black), # Grid for header
             ]))
 
             story.append(main_table)
