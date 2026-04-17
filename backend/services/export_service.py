@@ -319,12 +319,18 @@ class ExportService:
                 Paragraph('Link', header_style)
             ]]
             
-            for video in videos[:200]:
+            # Limit to 100 videos to prevent memory issues and timeouts on Render
+            pdf_limit = 100
+            for i, video in enumerate(videos[:pdf_limit]):
                 ts_date = video.timestamp.strftime('%d %b %Y,')
                 ts_time = video.timestamp.strftime('%I:%M %p').lower()
                 ts_para = Paragraph(f"{ts_date}<br/>{ts_time}", timestamp_style)
 
-                thumb = self._get_image(video.thumbnail)
+                # Only fetch thumbnails for the first 25 videos to ensure fast generation
+                thumb = None
+                if i < 25:
+                    thumb = self._get_image(video.thumbnail)
+                
                 if not thumb:
                     thumb = Paragraph("", v_desc_style)
 
@@ -334,7 +340,7 @@ class ExportService:
                     Paragraph(video.description[:150] + "..." if len(video.description) > 150 else video.description, v_desc_style)
                 ]
 
-                inner_table = Table([[thumb, content_text]], colWidths=[0.9*inch, 5.0*inch])
+                inner_table = Table([[thumb, content_text]], colWidths=[0.9*inch, 4.2*inch])
                 inner_table.setStyle(TableStyle([
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                     ('LEFTPADDING', (0, 0), (-1, -1), 0),
@@ -395,9 +401,9 @@ class ExportService:
 
             story.append(main_table)
             
-            if len(videos) > 200:
+            if len(videos) > pdf_limit:
                 story.append(Spacer(1, 15))
-                story.append(Paragraph(f"Note: Report limited to top 200 videos. Total results found: {len(videos)}.", styles['Italic']))
+                story.append(Paragraph(f"Note: Report limited to top {pdf_limit} videos to optimize performance. Total results found: {len(videos)}.", styles['Italic']))
 
             doc.build(story)
             pdf_content = buffer.getvalue()
