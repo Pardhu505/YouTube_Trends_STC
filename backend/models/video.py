@@ -10,6 +10,7 @@ class VideoSearchRequest(BaseModel):
     region: str = "IN"
     page: int = 1
     page_size: int = 200
+    sentiment: Optional[str] = None
 
 class VideoResponse(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
