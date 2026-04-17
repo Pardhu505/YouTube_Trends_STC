@@ -94,7 +94,8 @@ class ExportService:
         try:
             if not url:
                 return None
-            resp = requests.get(url, timeout=2) # Reduced timeout for faster generation
+            # Extremely short timeout for cloud environments to prevent hangs
+            resp = requests.get(url, timeout=1.5) 
             if resp.status_code == 200:
                 img_data = io.BytesIO(resp.content)
                 img = RLImage(img_data)
@@ -338,16 +339,17 @@ class ExportService:
                 Paragraph('Link', header_style)
             ]]
             
-            # Limit to 500 videos for general reports; if more needed, user can adjust
+            # Limit to 500 videos for general reports
             pdf_limit = 500
             for i, video in enumerate(videos[:pdf_limit]):
                 ts_date = video.timestamp.strftime('%d %b %Y,')
                 ts_time = video.timestamp.strftime('%I:%M %p').lower()
                 ts_para = Paragraph(f"{ts_date}<br/>{ts_time}", timestamp_style)
 
-                # Only fetch thumbnails for the first 50 videos to ensure fast generation
+                # Fetch thumbnails for ONLY first 10 videos on cloud/restricted environments
+                # to prevent timeouts (Render has a 30s limit)
                 thumb = None
-                if i < 50:
+                if i < 10:
                     thumb = self._get_image(video.thumbnail)
                 
                 if not thumb:
