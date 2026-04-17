@@ -68,14 +68,16 @@ class YouTubeService:
             video_response = self._convert_to_video_response(video, search_request.keywords)
             if video_response:
                 # Apply sentiment filter if provided
-                if search_request.sentiment and search_request.sentiment != 'All':
-                    if video_response.sentiment.lower() == search_request.sentiment.lower():
+                sentiment_filter = getattr(search_request, 'sentiment', None)
+                if sentiment_filter and sentiment_filter != 'All':
+                    if video_response.sentiment.lower() == sentiment_filter.lower():
                         videos.append(video_response)
                 else:
                     videos.append(video_response)
 
         # If filtered, update total count
-        if search_request.sentiment and search_request.sentiment != 'All':
+        sentiment_filter = getattr(search_request, 'sentiment', None)
+        if sentiment_filter and sentiment_filter != 'All':
             total_results = len(videos)
 
         return videos, total_results
