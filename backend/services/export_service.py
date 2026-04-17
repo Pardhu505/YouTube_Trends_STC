@@ -246,29 +246,28 @@ class ExportService:
             story.append(param_table)
             story.append(Spacer(1, 15))
 
-            # 2. Analytics Summary Table
-            story.append(Paragraph("Analytics Summary", section_header_style))
+            # 2. Analytics Summary Tables
+            story.append(Paragraph("Overall Performance Metrics", section_header_style))
+            
             total_views = sum(video.views for video in videos)
             total_likes = sum(video.likes for video in videos)
             total_comments = sum(video.comments for video in videos)
+            total_engagement = total_likes + total_comments
+            avg_views = total_views // len(videos) if videos else 0
+            avg_likes = total_likes // len(videos) if videos else 0
+            avg_comments = total_comments // len(videos) if videos else 0
 
-            sentiment_counts = {'Positive': 0, 'Negative': 0, 'Neutral': 0}
-            for v in videos:
-                sentiment_counts[v.sentiment] = sentiment_counts.get(v.sentiment, 0) + 1
-
-            summary_data = [
-                [Paragraph('Metric', header_style), Paragraph('Value', header_style)],
-                ['Total Views', f"{total_views:,}"],
-                ['Total Likes', f"{total_likes:,}"],
-                ['Total Comments', f"{total_comments:,}"],
-                ['Average Views per Video', f"{total_views // len(videos) if videos else 0:,}"],
-                ['Positive Sentiment', f"{sentiment_counts['Positive']} videos"],
-                ['Negative Sentiment', f"{sentiment_counts['Negative']} videos"],
-                ['Neutral Sentiment', f"{sentiment_counts['Neutral']} videos"]
+            # Performance Table (2 columns, 4 rows)
+            perf_data = [
+                [Paragraph('Metric', header_style), Paragraph('Total Value', header_style), Paragraph('Average per Video', header_style)],
+                ['Views', f"{total_views:,}", f"{avg_views:,}"],
+                ['Likes', f"{total_likes:,}", f"{avg_likes:,}"],
+                ['Comments', f"{total_comments:,}", f"{avg_comments:,}"],
+                ['Total Engagement', f"{total_engagement:,}", 'N/A']
             ]
-            summary_table = Table(summary_data, colWidths=[3*inch, 3*inch])
-            summary_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.darkgrey),
+            perf_table = Table(perf_data, colWidths=[2.5*inch, 2.5*inch, 2.5*inch])
+            perf_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -276,7 +275,36 @@ class ExportService:
                 ('FONTSIZE', (0, 1), (-1, -1), 10),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.white),
             ]))
-            story.append(summary_table)
+            story.append(perf_table)
+            story.append(Spacer(1, 15))
+
+            # Sentiment Table
+            story.append(Paragraph("Sentiment Distribution", section_header_style))
+            sentiment_counts = {'Positive': 0, 'Negative': 0, 'Neutral': 0}
+            for v in videos:
+                sentiment_counts[v.sentiment] = sentiment_counts.get(v.sentiment, 0) + 1
+            
+            total_v = len(videos)
+            sent_data = [
+                [Paragraph('Sentiment', header_style), Paragraph('Count', header_style), Paragraph('Percentage', header_style)],
+                [Paragraph('Positive', ParagraphStyle('Pos', textColor=colors.green, alignment=TA_CENTER, fontName=DEFAULT_FONT_BOLD)), 
+                 str(sentiment_counts['Positive']), f"{(sentiment_counts['Positive']/total_v*100):.1f}%" if total_v > 0 else "0%"],
+                [Paragraph('Negative', ParagraphStyle('Neg', textColor=colors.red, alignment=TA_CENTER, fontName=DEFAULT_FONT_BOLD)), 
+                 str(sentiment_counts['Negative']), f"{(sentiment_counts['Negative']/total_v*100):.1f}%" if total_v > 0 else "0%"],
+                [Paragraph('Neutral', ParagraphStyle('Neu', textColor=colors.grey, alignment=TA_CENTER, fontName=DEFAULT_FONT_BOLD)), 
+                 str(sentiment_counts['Neutral']), f"{(sentiment_counts['Neutral']/total_v*100):.1f}%" if total_v > 0 else "0%"]
+            ]
+            
+            sent_table = Table(sent_data, colWidths=[2.5*inch, 2.5*inch, 2.5*inch])
+            sent_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkgrey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), DEFAULT_FONT),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ]))
+            story.append(sent_table)
             story.append(Spacer(1, 20))
 
             # 3. Video Details Table
@@ -287,7 +315,8 @@ class ExportService:
                 Paragraph('Views', header_style),
                 Paragraph('Likes', header_style),
                 Paragraph('Comments', header_style),
-                Paragraph('Sentiment', header_style)
+                Paragraph('Sentiment', header_style),
+                Paragraph('Link', header_style)
             ]]
             
             for video in videos[:200]:
@@ -300,7 +329,7 @@ class ExportService:
                     thumb = Paragraph("", v_desc_style)
 
                 content_text = [
-                    Paragraph(f'<a href="{video.url}" color="black"><b>{video.title}</b></a>', v_title_style),
+                    Paragraph(f'<a href="{video.url}" color="blue"><b>{video.title}</b></a>', v_title_style),
                     Paragraph(video.channel, v_channel_style),
                     Paragraph(video.description[:150] + "..." if len(video.description) > 150 else video.description, v_desc_style)
                 ]
@@ -339,16 +368,19 @@ class ExportService:
                 )
                 v_sentiment = Paragraph(video.sentiment, sent_style)
 
+                v_link = Paragraph(f'<a href="{video.url}" color="blue">Watch</a>', timestamp_style)
+
                 table_data.append([
                     ts_para,
                     inner_table,
                     v_views,
                     v_likes,
                     v_comments,
-                    v_sentiment
+                    v_sentiment,
+                    v_link
                 ])
 
-            col_widths = [1.1*inch, 6.0*inch, 0.8*inch, 0.8*inch, 0.8*inch, 1.0*inch]
+            col_widths = [1.1*inch, 5.2*inch, 0.8*inch, 0.8*inch, 0.8*inch, 1.0*inch, 0.8*inch]
             main_table = Table(table_data, colWidths=col_widths, repeatRows=1)
             main_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
