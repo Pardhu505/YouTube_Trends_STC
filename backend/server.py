@@ -32,7 +32,7 @@ from services.youtube_service import YouTubeService, YouTubeAPIError, YouTubeQuo
 from services.export_service import ExportService
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR / '.env', override=True)
 
 # MongoDB connection with better error handling
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/youtube_trends')

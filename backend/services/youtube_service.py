@@ -29,7 +29,13 @@ class YouTubeService:
         self.api_keys = []
         env_keys = os.environ.get('YOUTUBE_API_KEYS') or os.environ.get('YOUTUBE_API_KEY')
         if env_keys:
-            self.api_keys.extend([k.strip() for k in env_keys.split(',') if k.strip()])
+            keys = [k.strip() for k in env_keys.split(',') if k.strip()]
+            for k in keys:
+                if not k.startswith('AIza'):
+                    logger.warning(f"YouTube API key '{k[:5]}...' does not start with expected prefix 'AIza'. It might be invalid.")
+                else:
+                    logger.info(f"Loaded YouTube API key: {k[:5]}...")
+            self.api_keys.extend(keys)
 
         if not self.api_keys:
             logger.warning("No YouTube API keys found in environment variables.")
